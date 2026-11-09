@@ -46,19 +46,34 @@ export function download(blob, name) {
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
 }
 
-// Folha A4 (21 × 29,7 cm) com bolinhas de 5 × 5 cm, fundo transparente
-export function a4Sheets(canvases, dpi) {
+// Folha A4 (21 × 29,7 cm) com bolinhas de 5 × 5 cm, fundo transparente.
+// pairs = true → cada bolinha sai 2× (uma em cima da outra) para colar frente e verso.
+export function a4Sheets(canvases, dpi, pairs = false) {
   const px = (cm) => Math.round((cm / 2.54) * dpi);
-  const W = px(21), H = px(29.7), cell = px(5), cols = 3, rows = 5;
-  const gx = (W - cols * cell) / (cols + 1), gy = (H - rows * cell) / (rows + 1);
+  const W = px(21), H = px(29.7), cell = px(5), cols = 3;
   const sheets = [];
+  const newSheet = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; sheets.push(c); return c.getContext('2d'); };
+  if (pairs) {
+    const inner = px(0.3), blocks = 2, perPage = cols * blocks; // 6 pares = 12 bolinhas por folha
+    const gx = (W - cols * cell) / (cols + 1), gy = (H - blocks * (2 * cell + inner)) / (blocks + 1);
+    for (let i = 0; i < canvases.length; i += perPage) {
+      const x = newSheet();
+      canvases.slice(i, i + perPage).forEach((cv, j) => {
+        const col = j % cols, blk = Math.floor(j / cols);
+        const X = Math.round(gx + col * (cell + gx)), Y = Math.round(gy + blk * (2 * cell + inner + gy));
+        x.drawImage(cv, X, Y, cell, cell);
+        x.drawImage(cv, X, Y + cell + inner, cell, cell);
+      });
+    }
+    return sheets;
+  }
+  const rows = 5, gx = (W - cols * cell) / (cols + 1), gy = (H - rows * cell) / (rows + 1);
   for (let i = 0; i < canvases.length; i += cols * rows) {
-    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+    const x = newSheet();
     canvases.slice(i, i + cols * rows).forEach((cv, j) => {
       const col = j % cols, row = Math.floor(j / cols);
       x.drawImage(cv, Math.round(gx + col * (cell + gx)), Math.round(gy + row * (cell + gy)), cell, cell);
     });
-    sheets.push(c);
   }
   return sheets;
 }

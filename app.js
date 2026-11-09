@@ -185,7 +185,7 @@ $('#btnAll').onclick = async () => {
 $('#btnA4').onclick = async () => {
   const dpi = Math.min(600, Number($('#dpi').value));
   const canvases = []; for (const st of photos) canvases.push(await renderExport(st));
-  const sheets = a4Sheets(canvases, dpi); const files = [];
+  const sheets = a4Sheets(canvases, dpi, $('#a4Pairs').checked); const files = [];
   for (let i = 0; i < sheets.length; i++) files.push({ name: `folha-A4-${i + 1}.png`, blob: await canvasToPngWithDpi(sheets[i], dpi) });
   if (files.length === 1) download(files[0].blob, files[0].name); else download(await makeZip(files), 'folhas-A4.zip');
 };
@@ -195,9 +195,9 @@ $('#btnPdf').onclick = async () => {
   try {
     const dpi = Math.min(600, Math.max(300, Number($('#dpi').value)));
     const canvases = []; for (const st of photos) canvases.push(await renderExport(st));
-    const sheets = a4Sheets(canvases, dpi);
+    const sheets = a4Sheets(canvases, dpi, $('#a4Pairs').checked);
     download(await a4Pdf(sheets), 'bolinhas-de-natal-A4.pdf');
-    setStatus(`PDF gerado: ${sheets.length} página(s) A4, ${canvases.length} bolinha(s) de 5 × 5 cm. Imprima em "Tamanho real" (100%).`);
+    setStatus(`PDF gerado: ${sheets.length} página(s) A4, ${canvases.length} bolinha(s) de 5 × 5 cm${$('#a4Pairs').checked ? ' (2 de cada, frente e verso)' : ''}. Imprima em "Tamanho real" (100%).`);
   } finally { btn.disabled = false; }
 };
 
