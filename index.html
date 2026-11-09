@@ -6,7 +6,8 @@
 <title>Bolinhas de Natal com Foto · 5 × 5 cm</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&family=Great+Vibes&family=Montserrat:wght@700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css" />
+<link rel="icon" href="oc-226862.png" />
+<link rel="stylesheet" href="styles.css?v=20251110" />
 </head>
 <body>
 <header class="top">
@@ -45,6 +46,7 @@
       <button id="btnA4" disabled>Folha A4 (PNG)</button>
       <button id="btnPdf" disabled>Folha A4 (PDF)</button>
     </div>
+    <p class="tip">Para imprimir no tamanho certo, escolha <b>“Tamanho real” / 100%</b> na impressora (não use “Ajustar à página”).</p>
     <p class="status" id="status">Carregando biblioteca de assets…</p>
   </section>
 
@@ -70,8 +72,9 @@
         <label class="field"><span class="op">Opacidade <b id="opVal">100%</b></span><input type="range" id="txtOp" min="30" max="100" step="1" value="100" /></label>
         <button id="txtAll" type="button" class="ghost wide">Aplicar a todas as fotos</button>
       </div>
-      <p class="hint">Arraste a foto para reposicionar · use a rolagem do mouse para zoom.</p>
+      <p class="hint">Arraste a foto para reposicionar · rolagem do mouse = zoom · setas ← → trocam de foto · Ctrl+V cola uma imagem.</p>
       <p class="facewarn" id="facewarn" hidden>Rosto não detectado: ajuste o enquadramento manualmente.</p>
+      <p class="facewarn" id="cutwarn" hidden>Nenhuma pessoa encontrada: a foto foi mantida inteira, sem recorte de fundo.</p>
       <button id="recompose" class="wide">Nova composição</button>
       <button id="dl" class="primary wide">Baixar PNG 5 × 5 cm</button>
       <button id="del" class="ghost wide">Remover esta foto</button>
@@ -102,6 +105,6 @@
   <div id="credList"></div>
 </dialog>
 
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=20251110"></script>
 </body>
 </html>

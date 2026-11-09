@@ -37,11 +37,13 @@ export function cutoutPerson(vis, canvas) {
   const mw = m.width, mh = m.height; const bg = m.getAsFloat32Array();
   const mc = document.createElement('canvas'); mc.width = mw; mc.height = mh;
   const mx = mc.getContext('2d'); const id = mx.createImageData(mw, mh);
+  let cover = 0;
   for (let i = 0; i < bg.length; i++) {
     let a = 1 - bg[i];
     a = Math.min(1, Math.max(0, (a - 0.2) / 0.6)); a = a * a * (3 - 2 * a);
-    id.data[i * 4 + 3] = Math.round(a * 255);
+    id.data[i * 4 + 3] = Math.round(a * 255); cover += a;
   }
+  if (cover / bg.length < 0.03) { res.close && res.close(); return null; } // nenhuma pessoa: mantém a foto inteira
   mx.putImageData(id, 0, 0);
   res.close && res.close();
   const out = document.createElement('canvas'); out.width = canvas.width; out.height = canvas.height;

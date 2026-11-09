@@ -1,6 +1,6 @@
 // Motor de composição: decide QUAIS assets usar e ONDE colocá-los.
 // Todas as coordenadas são normalizadas (0..1) em relação ao lado do quadrado 5 × 5 cm.
-import { makeRng } from './rng.js';
+import { makeRng } from './rng.js?v=20251110';
 
 export const GEO = { cx: 0.5, cy: 0.585, R: 0.38 };
 const D2R = Math.PI / 180;

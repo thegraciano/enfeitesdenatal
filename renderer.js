@@ -1,5 +1,5 @@
 // Renderização em canvas: fotografia + vidro da bola + assets posicionados.
-import { GEO, THEMES } from './composer.js';
+import { GEO, THEMES } from './composer.js?v=20251110';
 
 export function photoTransform(st) {
   const { w, h } = st; const { cx, cy, R } = GEO;
@@ -7,8 +7,8 @@ export function photoTransform(st) {
   if (st.face) {
     const b = st.face.box;
     // com gorro, o rosto fica um pouco menor e mais baixo para o gorro caber dentro do vidro
-    k0 = (st.hat ? 0.205 : 0.245) / b.h; fx = b.x + b.w / 2; fy = b.y + b.h * 0.5;
-    if (st.hat) ty = cy + 0.06;
+    // rosto um pouco menor e mais baixo: cabelo inteiro dentro do vidro, longe do laço
+    k0 = 0.215 / b.h; fx = b.x + b.w / 2; fy = b.y + b.h * 0.5; ty = cy + 0.035;
   } else {
     k0 = (2 * R) / Math.min(w, h); fx = w / 2; fy = h / 2; ty = cy + 0.02;
   }
@@ -49,15 +49,27 @@ const chord = (y) => 2 * Math.sqrt(Math.max(0, GEO.R * GEO.R - (y - GEO.cy) ** 2
 function drawCaption(ctx, S, st, fitK = 0.86) {
   const t = st.text || { color: '#ffffff', opacity: 1 };
   const { y1, y2 } = textLayout(st);
+  // véu escuro suave atrás do texto (dentro do vidro) para leitura sobre qualquer roupa
+  ctx.save();
+  ctx.beginPath(); ctx.arc(GEO.cx * S, GEO.cy * S, GEO.R * S, 0, Math.PI * 2); ctx.clip();
+  const my = ((y1 + y2) / 2) * S;
+  ctx.translate(0.5 * S, my); ctx.scale(1, 0.42);
+  const vg = ctx.createRadialGradient(0, 0, 0, 0, 0, S * 0.3);
+  vg.addColorStop(0, 'rgba(0,0,0,0.42)'); vg.addColorStop(0.6, 'rgba(0,0,0,0.25)'); vg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(0, 0, S * 0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
   ctx.save();
   ctx.globalAlpha = Math.max(0.3, Math.min(1, t.opacity));
   ctx.fillStyle = t.color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = S * 0.009; ctx.shadowOffsetY = S * 0.002;
   const fit = (txt, size, font, maxW) => { ctx.font = font(size); const w = ctx.measureText(txt).width; if (w > maxW) ctx.font = font(size * maxW / w); };
   fit(CAPTION[0], S * 0.105, (z) => `${z}px "Great Vibes", "Brush Script MT", cursive`, chord(y1) * S * fitK);
+  ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = S * 0.004;
+  ctx.strokeText(CAPTION[0], 0.5 * S, y1 * S);
   ctx.fillText(CAPTION[0], 0.5 * S, y1 * S);
   if ('letterSpacing' in ctx) ctx.letterSpacing = `${(S * 0.0016).toFixed(1)}px`;
   fit(CAPTION[1], S * 0.04, (z) => `700 ${z}px Montserrat, Arial, sans-serif`, chord(y2) * S * (fitK - 0.02));
+  ctx.lineWidth = S * 0.003; ctx.strokeText(CAPTION[1], 0.5 * S, y2 * S);
   ctx.fillText(CAPTION[1], 0.5 * S, y2 * S);
   ctx.restore();
 }

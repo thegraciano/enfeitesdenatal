@@ -1,9 +1,9 @@
-import { AssetLibrary, CATEGORIES } from './assets.js';
-import { compose, THEMES, TEMPLATES } from './composer.js';
-import { render, faceZones, textLayout } from './renderer.js';
-import { canvasToPngWithDpi, makeZip, download, a4Sheets, a4Pdf } from './export.js';
-import { loadVision, detectFace, cutoutPerson } from './vision.js';
-import { randomSeed, makeRng } from './rng.js';
+import { AssetLibrary, CATEGORIES } from './assets.js?v=20251110';
+import { compose, THEMES, TEMPLATES } from './composer.js?v=20251110';
+import { render, faceZones, textLayout } from './renderer.js?v=20251110';
+import { canvasToPngWithDpi, makeZip, download, a4Sheets, a4Pdf } from './export.js?v=20251110';
+import { loadVision, detectFace, cutoutPerson } from './vision.js?v=20251110';
+import { randomSeed, makeRng } from './rng.js?v=20251110';
 
 const $ = (s, r = document) => r.querySelector(s);
 const lib = new AssetLibrary();
@@ -84,7 +84,7 @@ async function analyze(st) {
     warmVision();
     const vis = await Promise.race([loadVision(), new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 45000))]);
     st.face = detectFace(vis, st.bitmap);
-    if (wantCut) { st.cutout = cutoutPerson(vis, st.bitmap); st.useCutout = true; }
+    if (wantCut) { st.cutout = cutoutPerson(vis, st.bitmap); st.useCutout = !!st.cutout; st.noPerson = !st.cutout; }
   } catch (e) {
     console.warn('Visão indisponível', e);
     setStatus('Detecção de rosto/recorte indisponível (sem internet?). As artes continuam funcionando com enquadramento manual.');
@@ -120,6 +120,7 @@ function syncPanel() {
   $('#txtColor').value = st.text.color; $('#txtOp').value = Math.round(st.text.opacity * 100); $('#opVal').textContent = `${Math.round(st.text.opacity * 100)}%`;
   document.querySelectorAll('#swatches button').forEach((b) => b.classList.toggle('on', b.dataset.c.toLowerCase() === st.text.color.toLowerCase()));
   $('#facewarn').hidden = st.busy || !!st.face;
+  $('#cutwarn').hidden = st.busy || !st.noPerson;
   $('#busy').hidden = !st.busy;
 }
 
@@ -144,7 +145,7 @@ function setupEditor() {
   $('#txtOp').oninput = (e) => { if (!current) return; const o = Number(e.target.value) / 100; current.text.opacity = o; textDefault.opacity = o; $('#opVal').textContent = `${e.target.value}%`; recompute(current); };
   $('#txtAll').onclick = () => { if (!current) return; for (const p of photos) { p.text = { ...current.text }; recompute(p); } setStatus('Cor e opacidade do texto aplicadas a todas as fotos.'); };
   $('#recompose').onclick = () => { current.seed = randomSeed(); recompute(current); };
-  $('#dl').onclick = () => exportOne(current).then(({ blob, name }) => download(blob, name));
+  $('#dl').onclick = () => guarded('baixar o PNG', async () => { const { blob, name } = await exportOne(current); download(blob, name); });
   $('#del').onclick = () => {
     const i = photos.indexOf(current); photos.splice(i, 1); current.thumbEl.remove();
     current = null; select(photos[Math.min(i, photos.length - 1)] || null);
@@ -164,6 +165,21 @@ function setupEditor() {
   cv.addEventListener('wheel', (e) => { if (!current) return; e.preventDefault(); current.view.zoom = Math.min(2.2, Math.max(0.6, current.view.zoom * (e.deltaY < 0 ? 1.04 : 0.96))); $('#zoom').value = current.view.zoom; recompute(current); }, { passive: false });
 }
 
+const EXPORT_BTNS = ['#btnAll', '#btnA4', '#btnPdf', '#dl'];
+let exporting = false;
+async function guarded(label, fn) {
+  if (exporting) return; exporting = true;
+  EXPORT_BTNS.forEach((b) => { $(b).disabled = true; }); document.body.classList.add('exporting');
+  try { await fn(); } catch (e) { console.error(e); setStatus(`Erro ao ${label}: ${e.message || e}. Tente uma resolução menor.`); }
+  finally { exporting = false; document.body.classList.remove('exporting'); EXPORT_BTNS.forEach((b) => { $(b).disabled = false; }); refreshUi(); }
+}
+const tick = () => new Promise((r) => setTimeout(r, 0));
+async function renderAll(what) {
+  const out = [];
+  for (const [i, st] of photos.entries()) { setStatus(`${what}… ${i + 1}/${photos.length}`); await tick(); out.push(await renderExport(st)); }
+  return out;
+}
+
 async function renderExport(st) {
   const c = document.createElement('canvas'); c.width = c.height = sizePx();
   render(c, st, st.comp, { shadows: true });
@@ -175,31 +191,30 @@ async function exportOne(st) {
   return { blob, name: `${st.name}-bolinha-natal-5x5cm.png`, canvas: c };
 }
 
-$('#btnAll').onclick = async () => {
-  setStatus('Gerando arquivos em alta resolução…');
+$('#btnAll').onclick = () => guarded('gerar o ZIP', async () => {
   const files = []; const used = new Set();
-  for (const st of photos) { const r = await exportOne(st); let n = r.name, i = 2; while (used.has(n)) n = r.name.replace('.png', `-${i++}.png`); used.add(n); files.push({ name: n, blob: r.blob }); }
+  for (const [k, st] of photos.entries()) { setStatus(`Gerando arquivos em alta resolução… ${k + 1}/${photos.length}`); await tick(); const r = await exportOne(st); let n = r.name, i = 2; while (used.has(n)) n = r.name.replace('.png', `-${i++}.png`); used.add(n); files.push({ name: n, blob: r.blob }); }
   download(await makeZip(files), 'bolinhas-de-natal-5x5cm.zip');
   setStatus(`${files.length} arte(s) exportada(s) a ${$('#dpi').value} DPI.`);
-};
-$('#btnA4').onclick = async () => {
+});
+$('#btnA4').onclick = () => guarded('gerar a folha A4', async () => {
   const dpi = Math.min(600, Number($('#dpi').value));
-  const canvases = []; for (const st of photos) canvases.push(await renderExport(st));
+  const canvases = await renderAll('Montando folha A4');
   const sheets = a4Sheets(canvases, dpi, $('#a4Pairs').checked); const files = [];
   for (let i = 0; i < sheets.length; i++) files.push({ name: `folha-A4-${i + 1}.png`, blob: await canvasToPngWithDpi(sheets[i], dpi) });
   if (files.length === 1) download(files[0].blob, files[0].name); else download(await makeZip(files), 'folhas-A4.zip');
-};
+  setStatus(`Folha A4 gerada: ${sheets.length} folha(s). Imprima em "Tamanho real" (100%).`);
+});
 
-$('#btnPdf').onclick = async () => {
-  const btn = $('#btnPdf'); btn.disabled = true; setStatus('Gerando PDF da folha A4…');
-  try {
+$('#btnPdf').onclick = () => guarded('gerar o PDF', async () => {
+  {
     const dpi = Math.min(600, Math.max(300, Number($('#dpi').value)));
-    const canvases = []; for (const st of photos) canvases.push(await renderExport(st));
+    const canvases = await renderAll('Gerando PDF da folha A4');
     const sheets = a4Sheets(canvases, dpi, $('#a4Pairs').checked);
     download(await a4Pdf(sheets), 'bolinhas-de-natal-A4.pdf');
     setStatus(`PDF gerado: ${sheets.length} página(s) A4, ${canvases.length} bolinha(s) de 5 × 5 cm${$('#a4Pairs').checked ? ' (2 de cada, frente e verso)' : ''}. Imprima em "Tamanho real" (100%).`);
-  } finally { btn.disabled = false; }
-};
+  }
+});
 
 // envio de fotos
 const drop = $('#drop');
@@ -238,6 +253,14 @@ $('#btnCredits').onclick = () => {
   $('#credList').innerHTML = `<p>Todos os elementos decorativos vêm de bibliotecas públicas de assets. Nenhuma decoração é desenhada ou gerada por IA.</p><table><thead><tr><th></th><th>Elemento</th><th>Autor</th><th>Fonte</th><th>Licença</th></tr></thead><tbody>${lib.assets.map((a) => `<tr><td><img src="${a.src}" alt="" /></td><td>${esc(a.title)}</td><td>${esc(a.author)}</td><td>${a.url ? `<a href="${a.url}" target="_blank" rel="noopener">${esc(a.source)}</a>` : esc(a.source)}</td><td>${esc(a.license)}</td></tr>`).join('')}</tbody></table>`;
   $('#credDialog').showModal();
 };
+
+// colar imagem com Ctrl+V
+document.addEventListener('paste', (e) => {
+  const imgs = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith('image/'));
+  if (imgs.length) { e.preventDefault(); addFiles(imgs); }
+});
+// evita perder o trabalho ao fechar/atualizar a página sem querer
+window.addEventListener('beforeunload', (e) => { if (photos.length) { e.preventDefault(); e.returnValue = ''; } });
 
 window.__xo = { photos, lib, addFiles, exportOne, recompute };
 init();

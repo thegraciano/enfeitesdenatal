@@ -88,3 +88,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 .swatches button.on{outline:2px solid var(--gold);outline-offset:2px}
 #txtColor{width:34px;height:28px;border:1px solid var(--line);border-radius:8px;background:none;padding:0;cursor:pointer}
 .op{display:flex;justify-content:space-between}.op b{color:var(--text);font-weight:500}
+
+.tip{margin:6px 0 0;font-size:12px;opacity:.75}
+body.exporting{cursor:progress}
+#mainCanvas{touch-action:none}
