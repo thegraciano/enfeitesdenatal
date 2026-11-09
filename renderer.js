@@ -36,6 +36,32 @@ export function faceZones(st) {
   return { box, ellipse, eyeY, detected: !!st.face };
 }
 
+// ---------- texto fixo e obrigatório ----------
+export const CAPTION = ['Feliz Natal', 'SCFV Espaço Amigo'];
+export function textLayout(st) {
+  const z = faceZones(st);
+  const chin = z.box.y + z.box.h * 1.02;
+  const y1 = Math.max(GEO.cy + 0.2, Math.min(GEO.cy + 0.25, chin + 0.075));
+  const y2 = y1 + 0.068;
+  return { y1, y2, zone: { x: 0.5, y: (y1 + y2) / 2, rx: 0.3, ry: 0.078 } };
+}
+const chord = (y) => 2 * Math.sqrt(Math.max(0, GEO.R * GEO.R - (y - GEO.cy) ** 2));
+function drawCaption(ctx, S, st, fitK = 0.86) {
+  const t = st.text || { color: '#ffffff', opacity: 1 };
+  const { y1, y2 } = textLayout(st);
+  ctx.save();
+  ctx.globalAlpha = Math.max(0.3, Math.min(1, t.opacity));
+  ctx.fillStyle = t.color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = S * 0.009; ctx.shadowOffsetY = S * 0.002;
+  const fit = (txt, size, font, maxW) => { ctx.font = font(size); const w = ctx.measureText(txt).width; if (w > maxW) ctx.font = font(size * maxW / w); };
+  fit(CAPTION[0], S * 0.105, (z) => `${z}px "Great Vibes", "Brush Script MT", cursive`, chord(y1) * S * fitK);
+  ctx.fillText(CAPTION[0], 0.5 * S, y1 * S);
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${(S * 0.0016).toFixed(1)}px`;
+  fit(CAPTION[1], S * 0.04, (z) => `700 ${z}px Montserrat, Arial, sans-serif`, chord(y2) * S * (fitK - 0.02));
+  ctx.fillText(CAPTION[1], 0.5 * S, y2 * S);
+  ctx.restore();
+}
+
 const tintCache = new Map();
 function tinted(img, color) {
   const key = img.src + color;
@@ -124,6 +150,7 @@ export function render(canvas, st, comp, { shadows = true } = {}) {
   ctx.drawImage(L, 0, 0);
 
   for (const it of comp.items) if (it.layer === 'front') shadows ? drawShadowed(ctx, S, it) : drawItem(ctx, S, it);
+  drawCaption(ctx, S, st, comp.captionFit || 0.86); // sempre presente, por cima de tudo
 }
 
 function hexA(hex, a) {

@@ -1,6 +1,6 @@
 import { AssetLibrary, CATEGORIES } from './assets.js';
 import { compose, THEMES, TEMPLATES } from './composer.js';
-import { render, faceZones } from './renderer.js';
+import { render, faceZones, textLayout } from './renderer.js';
 import { canvasToPngWithDpi, makeZip, download, a4Sheets } from './export.js';
 import { loadVision, detectFace, cutoutPerson } from './vision.js';
 import { randomSeed, makeRng } from './rng.js';
@@ -19,6 +19,7 @@ const sizePx = () => Math.round((5 / 2.54) * Number($('#dpi').value));
 async function init() {
   fillSelect($('#defTheme'), THEMES, 'vermelho');
   fillSelect($('#impCat'), CATEGORIES);
+  try { await Promise.all([document.fonts.load('80px "Great Vibes"'), document.fonts.load('700 40px Montserrat')]); } catch (e) { console.warn('fontes', e); }
   try { await lib.init(); } catch (e) { setStatus('Não foi possível carregar assets/manifest.json. Abra o app por um servidor (GitHub Pages ou "npx serve").'); return; }
   setStatus(`${lib.assets.filter((a) => a.img).length} assets profissionais carregados.`);
   setupEditor();
@@ -48,10 +49,12 @@ function usageExcept(st) {
 
 let current = null;
 const THUMB = 240;
+const textDefault = { color: '#ffffff', opacity: 1 };
+const SWATCHES = { Branco: '#ffffff', Dourado: '#f2c96b', Creme: '#fff1d0', Vermelho: '#c8102e', Verde: '#0f6b3a', Prata: '#d9dee6' };
 
 function recompute(st) {
   const z = faceZones(st);
-  st.comp = compose({ lib, seed: st.seed, template: st.template, theme: st.theme, face: z.ellipse, usage: usageExcept(st), hat: null });
+  st.comp = compose({ lib, seed: st.seed, template: st.template, theme: st.theme, face: z.ellipse, usage: usageExcept(st), hat: null, textZone: textLayout(st).zone });
   render(st.thumb, st, st.comp, { shadows: true });
   if (st === current) render($('#mainCanvas'), st, st.comp, { shadows: true });
 }
@@ -64,7 +67,7 @@ async function addFiles(files) {
     try { bitmap = await fileToCanvas(f); } catch (e) { setStatus(`Não foi possível abrir ${f.name}.`); continue; }
     const st = {
       name: f.name.replace(/\.[^.]+$/, ''), bitmap, w: bitmap.width, h: bitmap.height, face: null, cutout: null,
-      useCutout: false, hat: false, busy: true, view: { zoom: 1, dx: 0, dy: 0 }, seed: randomSeed(),
+      useCutout: false, hat: false, busy: true, view: { zoom: 1, dx: 0, dy: 0 }, seed: randomSeed(), text: { ...textDefault },
       template: tplOrder[photos.length % tplOrder.length], theme: $('#defTheme').value,
     };
     photos.push(st); buildThumb(st);
@@ -114,6 +117,8 @@ function syncPanel() {
   $('#counter').textContent = `Foto ${photos.indexOf(st) + 1} de ${photos.length}`;
   $('#tpl').value = st.template; $('#theme').value = st.theme; $('#zoom').value = st.view.zoom;
   $('#cutout').checked = st.useCutout; $('#cutout').disabled = !st.cutout;
+  $('#txtColor').value = st.text.color; $('#txtOp').value = Math.round(st.text.opacity * 100); $('#opVal').textContent = `${Math.round(st.text.opacity * 100)}%`;
+  document.querySelectorAll('#swatches button').forEach((b) => b.classList.toggle('on', b.dataset.c.toLowerCase() === st.text.color.toLowerCase()));
   $('#facewarn').hidden = st.busy || !!st.face;
   $('#busy').hidden = !st.busy;
 }
@@ -132,6 +137,12 @@ function setupEditor() {
   $('#theme').onchange = (e) => { current.theme = e.target.value; recompute(current); };
   $('#zoom').oninput = (e) => { current.view.zoom = Number(e.target.value); recompute(current); };
   $('#cutout').onchange = (e) => { current.useCutout = e.target.checked && !!current.cutout; recompute(current); };
+  $('#swatches').innerHTML = Object.entries(SWATCHES).map(([n, c]) => `<button type="button" title="${n}" data-c="${c}" style="background:${c}"></button>`).join('');
+  const setColor = (c) => { current.text.color = c; textDefault.color = c; recompute(current); syncPanel(); };
+  $('#swatches').onclick = (e) => { const b = e.target.closest('button'); if (b && current) setColor(b.dataset.c); };
+  $('#txtColor').oninput = (e) => current && setColor(e.target.value);
+  $('#txtOp').oninput = (e) => { if (!current) return; const o = Number(e.target.value) / 100; current.text.opacity = o; textDefault.opacity = o; $('#opVal').textContent = `${e.target.value}%`; recompute(current); };
+  $('#txtAll').onclick = () => { if (!current) return; for (const p of photos) { p.text = { ...current.text }; recompute(p); } setStatus('Cor e opacidade do texto aplicadas a todas as fotos.'); };
   $('#recompose').onclick = () => { current.seed = randomSeed(); recompute(current); };
   $('#dl').onclick = () => exportOne(current).then(({ blob, name }) => download(blob, name));
   $('#del').onclick = () => {

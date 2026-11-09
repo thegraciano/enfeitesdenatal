@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Bolinhas de Natal com Foto · 5 × 5 cm</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&family=Great+Vibes&family=Montserrat:wght@700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -59,6 +59,15 @@
       <label class="field">Cor da bola <select id="theme"></select></label>
       <label class="field">Zoom da foto <input type="range" id="zoom" min="0.6" max="2.2" step="0.01" value="1" /></label>
       <label class="check"><input type="checkbox" id="cutout" /> Fundo de vidro (recorte da foto)</label>
+      <div class="textbox">
+        <p class="tb-title">Texto da bolinha <span>obrigatório</span></p>
+        <p class="tb-preview">“Feliz Natal” · “SCFV Espaço Amigo”</p>
+        <div class="field">Cor da fonte
+          <div class="colors"><div class="swatches" id="swatches"></div><input type="color" id="txtColor" value="#ffffff" title="Outra cor" /></div>
+        </div>
+        <label class="field"><span class="op">Opacidade <b id="opVal">100%</b></span><input type="range" id="txtOp" min="30" max="100" step="1" value="100" /></label>
+        <button id="txtAll" type="button" class="ghost wide">Aplicar a todas as fotos</button>
+      </div>
       <p class="hint">Arraste a foto para reposicionar · use a rolagem do mouse para zoom.</p>
       <p class="facewarn" id="facewarn" hidden>Rosto não detectado: ajuste o enquadramento manualmente.</p>
       <button id="recompose" class="wide">Nova composição</button>

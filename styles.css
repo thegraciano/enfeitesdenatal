@@ -76,3 +76,15 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 .thumb.active{border-color:var(--gold);box-shadow:0 0 0 3px rgba(217,178,95,.25)}
 .editor[hidden]{display:none}
 @media (max-width:900px){.editor{grid-template-columns:1fr}.nav{display:none}}
+
+/* ---------- texto obrigatório ---------- */
+.textbox{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;background:#111a15}
+.tb-title{margin:0;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.tb-title span{font-size:11px;font-weight:500;color:var(--gold);border:1px solid rgba(217,178,95,.5);border-radius:999px;padding:1px 8px}
+.tb-preview{margin:0;color:var(--muted);font-size:12px}
+.colors{display:flex;align-items:center;gap:8px}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.swatches button{width:24px;height:24px;border-radius:50%;padding:0;border:2px solid rgba(255,255,255,.25)}
+.swatches button.on{outline:2px solid var(--gold);outline-offset:2px}
+#txtColor{width:34px;height:28px;border:1px solid var(--line);border-radius:8px;background:none;padding:0;cursor:pointer}
+.op{display:flex;justify-content:space-between}.op b{color:var(--text);font-weight:500}

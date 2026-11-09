@@ -54,13 +54,13 @@ function conflicts(it, face) { return itemSamples(it).some((p) => inEllipse(p, f
 function outOfBounds(it, m = 0.004) { return itemSamples(it).some(([x, y]) => x < m || y < m || x > 1 - m || y > 1 - m); }
 
 // Ajusta o item até que ele não cubra o rosto e caiba no quadrado; se não for possível, descarta.
-function resolve(it, face) {
+function resolve(it, zones) {
   for (let t = 0; t < 26; t++) {
-    const c = it.protect !== false && conflicts(it, face);
+    const c = it.protect !== false && zones.find((z) => conflicts(it, z));
     const o = outOfBounds(it);
     if (!c && !o) return it;
     if (c) {
-      const vx = it.x - face.x, vy = it.y - face.y, n = Math.hypot(vx, vy) || 1;
+      const vx = it.x - c.x, vy = it.y - c.y, n = Math.hypot(vx, vy) || 1;
       it.x += (vx / n) * 0.014; it.y += (vy / n) * 0.014; it.w *= 0.95;
     }
     if (o) {
@@ -73,7 +73,8 @@ function resolve(it, face) {
 }
 
 // ---------- composição ----------
-export function compose({ lib, seed, template, theme, face, usage, hat }) {
+export function compose({ lib, seed, template, theme, face, usage, hat, textZone }) {
+  const zones = [face, textZone].filter(Boolean);
   const rng = makeRng(seed);
   const T = THEMES[theme] || THEMES.vermelho;
   usage = usage || new Map();
@@ -93,7 +94,7 @@ export function compose({ lib, seed, template, theme, face, usage, hat }) {
   const place = (asset, opts) => {
     if (!asset) return null;
     const it = { asset, layer: 'front', rot: 0, flip: false, alpha: 1, ...opts };
-    const ok = resolve(it, face);
+    const ok = resolve(it, zones);
     if (ok) items.push(ok);
     return ok;
   };
@@ -185,14 +186,15 @@ export function compose({ lib, seed, template, theme, face, usage, hat }) {
       { const B = rimPoint(side(140), 1.02); place(pick('bell'), { x: B[0], y: B[1], w: 0.13, rot: rng.range(-10, 10) * D2R }); } break;
     case 'base': {
       top();
-      const P = rimPoint(90, 0.97);
-      pine([P[0] - 0.02, P[1] - 0.01], 180 + rng.range(5, 20), rng.range(0.3, 0.36));
-      pine([P[0] + 0.02, P[1] - 0.01], 0 - rng.range(5, 20), rng.range(0.3, 0.36));
+      const P = rimPoint(90, 1.03);
+      pine([P[0] - 0.03, P[1] - 0.02], 180 + rng.range(8, 22), rng.range(0.28, 0.34));
+      pine([P[0] + 0.03, P[1] - 0.02], 0 - rng.range(8, 22), rng.range(0.28, 0.34));
       const b1 = pick('ball', T.ball), b2 = pick('ball', T.ball, b1 ? [b1.id] : []);
-      place(b1, { x: P[0] - 0.13, y: P[1] - 0.005, w: rng.range(0.12, 0.14) });
-      place(b2, { x: P[0] + 0.13, y: P[1] - 0.005, w: rng.range(0.12, 0.14) });
-      if (rng.chance(0.6)) place(pick('flower'), { x: P[0], y: P[1], w: rng.range(0.2, 0.23) });
-      else place(pick('leaves'), { x: P[0], y: P[1], w: rng.range(0.2, 0.22), flip: rng.chance(0.5) });
+      const L = rimPoint(118, 1.02), Rr = rimPoint(62, 1.02);
+      place(b1, { x: L[0], y: L[1], w: rng.range(0.12, 0.14) });
+      place(b2, { x: Rr[0], y: Rr[1], w: rng.range(0.12, 0.14) });
+      if (rng.chance(0.6)) place(pick('flower'), { x: P[0], y: P[1] - 0.005, w: rng.range(0.15, 0.17) });
+      else place(pick('leaves'), { x: P[0], y: P[1] - 0.005, w: rng.range(0.15, 0.17), flip: rng.chance(0.5) });
       stars(2, [-150, -30], [0.05, 0.07]);
       break;
     }
@@ -213,12 +215,13 @@ export function compose({ lib, seed, template, theme, face, usage, hat }) {
     }
     case 'dourado': {
       top();
-      const rib = pick('ribbon', ['gold']);
-      if (rib) items.push({ asset: rib, x: 0.5, y: GEO.cy + GEO.R * 0.74, w: 0.97, rot: (mirror ? 7 : -7) * D2R, flip: mirror, layer: 'front', protect: false });
-      const th = side(140); const P = rimPoint(th, 1.0);
-      place(pick('ball', ['gold']), { x: P[0], y: P[1] - 0.02, w: 0.15 });
-      place(pick('pinecone', ['gold']), { x: P[0] + (mirror ? -0.06 : 0.06), y: P[1] + 0.05, w: 0.11, rot: rng.range(0, 360) * D2R });
-      stars(3, [side(-150), side(-30), side(40)], [0.05, 0.08]);
+      // fita dourada acompanhando a borda inferior lateral (fora da área do texto)
+      const rt = side(152); const RP = rimPoint(rt, 1.0);
+      place(pick('ribbon', ['gold']), { x: RP[0], y: RP[1], w: rng.range(0.5, 0.56), rot: (rt - 90) * D2R, flip: mirror, minW: 0.3 });
+      const th = side(38); const P = rimPoint(th, 1.0);
+      place(pick('ball', ['gold']), { x: P[0], y: P[1], w: 0.15 });
+      place(pick('pinecone', ['gold']), { x: P[0] + (mirror ? 0.07 : -0.07), y: P[1] + 0.06, w: 0.11, rot: rng.range(0, 360) * D2R });
+      stars(3, [side(-150), side(-30), side(10)], [0.05, 0.08]);
       break;
     }
     default: { // clássico
@@ -238,7 +241,7 @@ export function compose({ lib, seed, template, theme, face, usage, hat }) {
   for (let i = 0, tries = 0; i < nF && tries < 200; tries++) {
     const ang = rng.range(0, Math.PI * 2), rr = Math.sqrt(rng.range(0.15, 0.86)) * GEO.R;
     const it = { asset: rng.pick(flakes), x: GEO.cx + Math.cos(ang) * rr, y: GEO.cy + Math.sin(ang) * rr, w: rng.range(0.035, 0.1), rot: rng.range(0, 60) * D2R, alpha: rng.range(0.55, 0.92), kind: 'flake' };
-    if (!it.asset || conflicts(it, innerFace)) continue;
+    if (!it.asset || conflicts(it, innerFace) || (textZone && conflicts(it, textZone))) continue;
     if (Math.hypot(it.x - GEO.cx, it.y - GEO.cy) + it.w / 2 > GEO.R * 0.97) continue;
     inner.push(it); i++;
   }
@@ -247,7 +250,7 @@ export function compose({ lib, seed, template, theme, face, usage, hat }) {
   for (let i = 0, tries = 0; i < nS && tries < 100 && sp.length; tries++) {
     const ang = rng.range(0, Math.PI * 2), rr = Math.sqrt(rng.range(0.2, 0.8)) * GEO.R;
     const it = { asset: rng.pick(sp), x: GEO.cx + Math.cos(ang) * rr, y: GEO.cy + Math.sin(ang) * rr, w: rng.range(0.035, 0.065), rot: 0, alpha: 1, kind: 'sparkle', tint: T.accent[0] === 'gold' ? '#ffd76a' : '#ffffff' };
-    if (conflicts(it, innerFace)) continue;
+    if (conflicts(it, innerFace) || (textZone && conflicts(it, textZone))) continue;
     inner.push(it); i++;
   }
 
@@ -265,5 +268,5 @@ export function compose({ lib, seed, template, theme, face, usage, hat }) {
     }
   }
 
-  return { seed, template, theme, items, inner, hat: hatItem };
+  return { seed, template, theme, items, inner, hat: hatItem, captionFit: template === 'guirlanda' ? 0.6 : 0.86 };
 }
