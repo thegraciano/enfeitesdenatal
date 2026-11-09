@@ -43,7 +43,7 @@ export class AssetLibrary {
     this.assets = [];
     this.disabled = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
   }
-  async init(manifestUrl = 'assets/manifest.json') {
+  async init(manifestUrl = 'manifest.json') {
     const m = await (await fetch(manifestUrl)).json();
     for (const a of m.assets) this.assets.push({ ...a, src: a.file, builtin: true });
     try {
