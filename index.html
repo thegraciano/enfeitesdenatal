@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bolinhas de Natal com Foto · 5 × 5 cm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <img src="assets/ball/oc-226862.png" alt="" class="logo" />
+    <div>
+      <h1>Bolinhas de Natal com Foto</h1>
+      <p>PNG transparente · 5 × 5 cm · assets de bibliotecas profissionais</p>
+    </div>
+  </div>
+  <div class="actions">
+    <button id="btnLibrary" class="ghost">Biblioteca de assets</button>
+    <button id="btnCredits" class="ghost">Créditos e licenças</button>
+  </div>
+</header>
+
+<main>
+  <section class="toolbar">
+    <label class="drop" id="drop">
+      <input type="file" id="fileInput" accept="image/*" multiple hidden />
+      <strong>Enviar fotografias</strong>
+      <span>Arraste aqui ou clique · JPG, PNG, HEIC convertida</span>
+    </label>
+    <div class="opts">
+      <label>Resolução
+        <select id="dpi">
+          <option value="300">300 DPI · 591 × 591 px</option>
+          <option value="600" selected>600 DPI · 1181 × 1181 px</option>
+          <option value="1200">1200 DPI · 2362 × 2362 px</option>
+        </select>
+      </label>
+      <label>Tema padrão <select id="defTheme"></select></label>
+      <label class="check"><input type="checkbox" id="defCutout" checked /> Recortar fundo da foto</label>
+      <label class="check"><input type="checkbox" id="defHat" checked /> Gorro de Papai Noel</label>
+      <button id="btnAll" class="primary" disabled>Baixar todas (ZIP)</button>
+      <button id="btnA4" disabled>Folha A4 para impressão</button>
+    </div>
+    <p class="status" id="status">Carregando biblioteca de assets…</p>
+  </section>
+
+  <section id="grid" class="grid"></section>
+  <p class="empty" id="empty">Envie uma ou mais fotos. Cada uma recebe uma composição natalina própria, seguindo o padrão visual da referência.</p>
+</main>
+
+<template id="cardTpl">
+  <article class="card">
+    <div class="stage"><canvas width="560" height="560"></canvas><div class="busy">Analisando foto…</div></div>
+    <div class="ctrl">
+      <div class="row">
+        <select class="tpl"></select>
+        <select class="theme"></select>
+      </div>
+      <div class="row">
+        <label>Zoom <input type="range" class="zoom" min="0.6" max="2.2" step="0.01" value="1" /></label>
+      </div>
+      <div class="row checks">
+        <label class="check"><input type="checkbox" class="cutout" /> Fundo de vidro</label>
+        <label class="check"><input type="checkbox" class="hat" /> Gorro</label>
+      </div>
+      <p class="hint">Arraste a foto para reposicionar.</p>
+      <div class="row">
+        <button class="recompose">Nova composição</button>
+        <button class="dl primary">Baixar PNG</button>
+        <button class="del ghost" title="Remover foto">Remover</button>
+      </div>
+      <p class="facewarn" hidden>Rosto não detectado: ajuste o enquadramento manualmente.</p>
+    </div>
+  </article>
+</template>
+
+<dialog id="libDialog">
+  <form method="dialog" class="dlg-head"><h2>Biblioteca de assets</h2><button>Fechar</button></form>
+  <div class="import">
+    <p>Adicione PNGs transparentes ou SVGs baixados de <b>Freepik, Flaticon, SVG Repo, Icons8, Pixabay, OpenMoji, OpenClipart</b> (respeite a licença de cada site). Eles ficam salvos neste navegador e entram nas próximas composições.</p>
+    <div class="row">
+      <select id="impCat"></select>
+      <select id="impSrc"><option>Freepik</option><option>Flaticon</option><option>SVG Repo</option><option>Icons8</option><option>Pixabay</option><option>OpenMoji</option><option>OpenClipart</option><option>Outra</option></select>
+      <select id="impTone"><option value="natural">Cor natural</option><option value="red">Vermelho</option><option value="gold">Dourado</option><option value="silver">Prata</option><option value="green">Verde</option><option value="blue">Azul</option><option value="white">Branco</option></select>
+      <input id="impLic" placeholder="Licença (ex.: Freepik Premium)" />
+      <label class="btn">Importar arquivos<input type="file" id="impFiles" accept="image/png,image/svg+xml,image/webp" multiple hidden /></label>
+    </div>
+  </div>
+  <div id="libList"></div>
+</dialog>
+
+<dialog id="credDialog">
+  <form method="dialog" class="dlg-head"><h2>Créditos e licenças</h2><button>Fechar</button></form>
+  <div id="credList"></div>
+</dialog>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
