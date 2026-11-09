@@ -62,3 +62,34 @@ export function a4Sheets(canvases, dpi) {
   }
   return sheets;
 }
+
+// PDF A4 sem dependências: cada folha vira uma página com a imagem em JPEG (fundo branco)
+export async function a4Pdf(sheets) {
+  const enc = new TextEncoder(); const parts = []; const offsets = []; let len = 0;
+  const push = (d) => { const b = typeof d === 'string' ? enc.encode(d) : d; parts.push(b); len += b.length; };
+  const obj = (n, body) => { offsets[n] = len; push(`${n} 0 obj\n`); body(); push('\nendobj\n'); };
+  const imgs = [];
+  for (const s of sheets) {
+    const c = document.createElement('canvas'); c.width = s.width; c.height = s.height; const x = c.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(s, 0, 0);
+    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.95));
+    imgs.push({ w: c.width, h: c.height, data: new Uint8Array(await blob.arrayBuffer()) });
+  }
+  const W = 595.28, H = 841.89, n = imgs.length; // pontos (A4)
+  push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+  const kids = imgs.map((_, i) => `${3 + i * 3} 0 R`).join(' ');
+  obj(1, () => push('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2, () => push(`<< /Type /Pages /Kids [${kids}] /Count ${n} >>`));
+  imgs.forEach((im, i) => {
+    const p = 3 + i * 3, ct = p + 1, io = p + 2;
+    obj(p, () => push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 ${io} 0 R >> >> /Contents ${ct} 0 R >>`));
+    const cs = `q ${W} 0 0 ${H} 0 0 cm /Im0 Do Q`;
+    obj(ct, () => push(`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`));
+    obj(io, () => { push(`<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.data.length} >>\nstream\n`); push(im.data); push('\nendstream'); });
+  });
+  const total = 3 + n * 3; const xref = len;
+  let t = `xref\n0 ${total}\n0000000000 65535 f \n`;
+  for (let i = 1; i < total; i++) t += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+  push(t + `trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  return new Blob(parts, { type: 'application/pdf' });
+}

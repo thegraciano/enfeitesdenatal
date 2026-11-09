@@ -1,7 +1,7 @@
 import { AssetLibrary, CATEGORIES } from './assets.js';
 import { compose, THEMES, TEMPLATES } from './composer.js';
 import { render, faceZones, textLayout } from './renderer.js';
-import { canvasToPngWithDpi, makeZip, download, a4Sheets } from './export.js';
+import { canvasToPngWithDpi, makeZip, download, a4Sheets, a4Pdf } from './export.js';
 import { loadVision, detectFace, cutoutPerson } from './vision.js';
 import { randomSeed, makeRng } from './rng.js';
 
@@ -126,7 +126,7 @@ function syncPanel() {
 function refreshUi() {
   const has = photos.length > 0;
   $('#editor').hidden = !has; $('#empty').hidden = has;
-  $('#btnAll').disabled = $('#btnA4').disabled = !has;
+  $('#btnAll').disabled = $('#btnA4').disabled = $('#btnPdf').disabled = !has;
   $('#prev').disabled = $('#next').disabled = photos.length < 2;
   if (current) syncPanel();
 }
@@ -188,6 +188,17 @@ $('#btnA4').onclick = async () => {
   const sheets = a4Sheets(canvases, dpi); const files = [];
   for (let i = 0; i < sheets.length; i++) files.push({ name: `folha-A4-${i + 1}.png`, blob: await canvasToPngWithDpi(sheets[i], dpi) });
   if (files.length === 1) download(files[0].blob, files[0].name); else download(await makeZip(files), 'folhas-A4.zip');
+};
+
+$('#btnPdf').onclick = async () => {
+  const btn = $('#btnPdf'); btn.disabled = true; setStatus('Gerando PDF da folha A4…');
+  try {
+    const dpi = Math.min(600, Math.max(300, Number($('#dpi').value)));
+    const canvases = []; for (const st of photos) canvases.push(await renderExport(st));
+    const sheets = a4Sheets(canvases, dpi);
+    download(await a4Pdf(sheets), 'bolinhas-de-natal-A4.pdf');
+    setStatus(`PDF gerado: ${sheets.length} página(s) A4, ${canvases.length} bolinha(s) de 5 × 5 cm. Imprima em "Tamanho real" (100%).`);
+  } finally { btn.disabled = false; }
 };
 
 // envio de fotos
