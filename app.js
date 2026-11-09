@@ -21,6 +21,7 @@ async function init() {
   fillSelect($('#impCat'), CATEGORIES);
   try { await lib.init(); } catch (e) { setStatus('Não foi possível carregar assets/manifest.json. Abra o app por um servidor (GitHub Pages ou "npx serve").'); return; }
   setStatus(`${lib.assets.filter((a) => a.img).length} assets profissionais carregados.`);
+  setupEditor();
   warmVision();
 }
 
@@ -45,10 +46,14 @@ function usageExcept(st) {
   return u;
 }
 
+let current = null;
+const THUMB = 240;
+
 function recompute(st) {
   const z = faceZones(st);
-  st.comp = compose({ lib, seed: st.seed, template: st.template, theme: st.theme, face: z.ellipse, usage: usageExcept(st), hat: st.hat && z.detected ? { box: z.box, eyeY: z.eyeY } : null });
-  render(st.canvas, st, st.comp, { shadows: true });
+  st.comp = compose({ lib, seed: st.seed, template: st.template, theme: st.theme, face: z.ellipse, usage: usageExcept(st), hat: null });
+  render(st.thumb, st, st.comp, { shadows: true });
+  if (st === current) render($('#mainCanvas'), st, st.comp, { shadows: true });
 }
 
 async function addFiles(files) {
@@ -59,61 +64,93 @@ async function addFiles(files) {
     try { bitmap = await fileToCanvas(f); } catch (e) { setStatus(`Não foi possível abrir ${f.name}.`); continue; }
     const st = {
       name: f.name.replace(/\.[^.]+$/, ''), bitmap, w: bitmap.width, h: bitmap.height, face: null, cutout: null,
-      useCutout: false, hat: false, view: { zoom: 1, dx: 0, dy: 0 }, seed: randomSeed(),
+      useCutout: false, hat: false, busy: true, view: { zoom: 1, dx: 0, dy: 0 }, seed: randomSeed(),
       template: tplOrder[photos.length % tplOrder.length], theme: $('#defTheme').value,
     };
-    photos.push(st); buildCard(st);
+    photos.push(st); buildThumb(st);
+    if (!current) select(st);
     analyze(st);
   }
-  $('#btnAll').disabled = $('#btnA4').disabled = !photos.length;
+  refreshUi();
 }
 
 async function analyze(st) {
-  const busy = $('.busy', st.card); busy.hidden = false;
   recompute(st);
-  const wantCut = $('#defCutout').checked, wantHat = $('#defHat').checked;
+  const wantCut = $('#defCutout').checked;
   try {
     warmVision();
     const vis = await Promise.race([loadVision(), new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 45000))]);
     st.face = detectFace(vis, st.bitmap);
     if (wantCut) { st.cutout = cutoutPerson(vis, st.bitmap); st.useCutout = true; }
-    st.hat = wantHat && !!st.face;
   } catch (e) {
     console.warn('Visão indisponível', e);
     setStatus('Detecção de rosto/recorte indisponível (sem internet?). As artes continuam funcionando com enquadramento manual.');
   }
-  $('.facewarn', st.card).hidden = !!st.face;
-  $('.cutout', st.card).checked = st.useCutout; $('.cutout', st.card).disabled = !st.cutout;
-  $('.hat', st.card).checked = st.hat; $('.hat', st.card).disabled = !st.face;
-  busy.hidden = true;
+  st.busy = false;
   recompute(st);
+  if (st === current) syncPanel();
 }
 
-function buildCard(st) {
-  const node = $('#cardTpl').content.firstElementChild.cloneNode(true);
-  st.card = node; st.canvas = $('canvas', node);
-  const tpl = $('.tpl', node), th = $('.theme', node);
-  fillSelect(tpl, TEMPLATES, st.template); fillSelect(th, THEMES, st.theme);
-  tpl.onchange = () => { st.template = tpl.value; recompute(st); };
-  th.onchange = () => { st.theme = th.value; recompute(st); };
-  $('.zoom', node).oninput = (e) => { st.view.zoom = Number(e.target.value); recompute(st); };
-  $('.cutout', node).onchange = (e) => { st.useCutout = e.target.checked && !!st.cutout; recompute(st); };
-  $('.hat', node).onchange = (e) => { st.hat = e.target.checked; recompute(st); };
-  $('.recompose', node).onclick = () => { st.seed = randomSeed(); recompute(st); };
-  $('.dl', node).onclick = () => exportOne(st).then(({ blob, name }) => download(blob, name));
-  $('.del', node).onclick = () => { photos.splice(photos.indexOf(st), 1); node.remove(); $('#empty').hidden = photos.length > 0; $('#btnAll').disabled = $('#btnA4').disabled = !photos.length; };
-  // arrastar para reposicionar
-  let drag = null;
-  st.canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, dx: st.view.dx, dy: st.view.dy }; st.canvas.setPointerCapture(e.pointerId); });
-  st.canvas.addEventListener('pointermove', (e) => {
-    if (!drag) return; const r = st.canvas.getBoundingClientRect();
-    st.view.dx = drag.dx + (e.clientX - drag.x) / r.width; st.view.dy = drag.dy + (e.clientY - drag.y) / r.height;
-    render(st.canvas, st, st.comp, { shadows: false });
+function buildThumb(st) {
+  const fig = document.createElement('button');
+  fig.className = 'thumb'; fig.title = st.name;
+  st.thumb = document.createElement('canvas'); st.thumb.width = st.thumb.height = THUMB;
+  fig.appendChild(st.thumb);
+  fig.onclick = () => select(st);
+  st.thumbEl = fig;
+  $('#strip').appendChild(fig);
+}
+
+function select(st) {
+  current = st;
+  photos.forEach((p) => p.thumbEl.classList.toggle('active', p === st));
+  if (st) { if (st.comp) render($('#mainCanvas'), st, st.comp, { shadows: true }); else recompute(st); syncPanel(); st.thumbEl.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }); }
+  refreshUi();
+}
+
+function syncPanel() {
+  const st = current; if (!st) return;
+  $('#photoName').textContent = st.name;
+  $('#counter').textContent = `Foto ${photos.indexOf(st) + 1} de ${photos.length}`;
+  $('#tpl').value = st.template; $('#theme').value = st.theme; $('#zoom').value = st.view.zoom;
+  $('#cutout').checked = st.useCutout; $('#cutout').disabled = !st.cutout;
+  $('#facewarn').hidden = st.busy || !!st.face;
+  $('#busy').hidden = !st.busy;
+}
+
+function refreshUi() {
+  const has = photos.length > 0;
+  $('#editor').hidden = !has; $('#empty').hidden = has;
+  $('#btnAll').disabled = $('#btnA4').disabled = !has;
+  $('#prev').disabled = $('#next').disabled = photos.length < 2;
+  if (current) syncPanel();
+}
+
+function setupEditor() {
+  fillSelect($('#tpl'), TEMPLATES); fillSelect($('#theme'), THEMES);
+  $('#tpl').onchange = (e) => { current.template = e.target.value; recompute(current); };
+  $('#theme').onchange = (e) => { current.theme = e.target.value; recompute(current); };
+  $('#zoom').oninput = (e) => { current.view.zoom = Number(e.target.value); recompute(current); };
+  $('#cutout').onchange = (e) => { current.useCutout = e.target.checked && !!current.cutout; recompute(current); };
+  $('#recompose').onclick = () => { current.seed = randomSeed(); recompute(current); };
+  $('#dl').onclick = () => exportOne(current).then(({ blob, name }) => download(blob, name));
+  $('#del').onclick = () => {
+    const i = photos.indexOf(current); photos.splice(i, 1); current.thumbEl.remove();
+    current = null; select(photos[Math.min(i, photos.length - 1)] || null);
+  };
+  const step = (d) => { if (photos.length < 2) return; const i = photos.indexOf(current); select(photos[(i + d + photos.length) % photos.length]); };
+  $('#prev').onclick = () => step(-1); $('#next').onclick = () => step(1);
+  document.addEventListener('keydown', (e) => { if (e.target.matches('input,select') || document.querySelector('dialog[open]')) return; if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1); });
+  const cv = $('#mainCanvas'); let drag = null;
+  cv.addEventListener('pointerdown', (e) => { if (!current) return; drag = { x: e.clientX, y: e.clientY, dx: current.view.dx, dy: current.view.dy }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', (e) => {
+    if (!drag) return; const r = cv.getBoundingClientRect();
+    current.view.dx = drag.dx + (e.clientX - drag.x) / r.width; current.view.dy = drag.dy + (e.clientY - drag.y) / r.height;
+    render(cv, current, current.comp, { shadows: false });
   });
-  const end = () => { if (drag) { drag = null; recompute(st); } };
-  st.canvas.addEventListener('pointerup', end); st.canvas.addEventListener('pointercancel', end);
-  st.canvas.addEventListener('wheel', (e) => { e.preventDefault(); st.view.zoom = Math.min(2.2, Math.max(0.6, st.view.zoom * (e.deltaY < 0 ? 1.04 : 0.96))); $('.zoom', node).value = st.view.zoom; recompute(st); }, { passive: false });
-  $('#grid').appendChild(node);
+  const end = () => { if (drag) { drag = null; recompute(current); } };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+  cv.addEventListener('wheel', (e) => { if (!current) return; e.preventDefault(); current.view.zoom = Math.min(2.2, Math.max(0.6, current.view.zoom * (e.deltaY < 0 ? 1.04 : 0.96))); $('#zoom').value = current.view.zoom; recompute(current); }, { passive: false });
 }
 
 async function renderExport(st) {

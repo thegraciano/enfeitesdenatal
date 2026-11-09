@@ -57,3 +57,22 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 #credList img{width:40px;height:40px;object-fit:contain}
 #credList a{color:var(--gold)}
 @media (max-width:720px){.toolbar{grid-template-columns:1fr}.top{flex-direction:column;align-items:flex-start}}
+
+/* ---------- editor central ---------- */
+.drop.small{min-height:64px;padding:10px 16px}
+.editor{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:28px;align-items:center;max-width:1100px;margin:28px auto 0}
+.stagewrap{display:flex;align-items:center;justify-content:center;gap:12px}
+.stage.big{width:min(640px,100%);border-radius:20px;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 6px rgba(217,178,95,.08);overflow:hidden}
+.nav{width:44px;height:44px;border-radius:50%;font-size:26px;line-height:1;padding:0;flex:0 0 auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:14px}
+.panel h2{font-size:22px;word-break:break-word}
+.counter{margin:0;color:var(--gold);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.field{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:13px}
+.field select{width:100%}.field input[type=range]{width:100%;accent-color:var(--gold)}
+.wide{width:100%;padding:11px 14px}
+.strip{display:flex;gap:12px;overflow-x:auto;padding:22px 4px 8px;justify-content:center;flex-wrap:wrap;max-width:1100px;margin:0 auto}
+.thumb{width:104px;height:104px;padding:4px;border-radius:14px;background:#111a15;border:2px solid var(--line);flex:0 0 auto}
+.thumb canvas{width:100%;height:100%;display:block}
+.thumb.active{border-color:var(--gold);box-shadow:0 0 0 3px rgba(217,178,95,.25)}
+.editor[hidden]{display:none}
+@media (max-width:900px){.editor{grid-template-columns:1fr}.nav{display:none}}

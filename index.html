@@ -25,57 +25,51 @@
 
 <main>
   <section class="toolbar">
-    <label class="drop" id="drop">
+    <label class="drop small" id="drop">
       <input type="file" id="fileInput" accept="image/*" multiple hidden />
-      <strong>Enviar fotografias</strong>
-      <span>Arraste aqui ou clique · JPG, PNG, HEIC convertida</span>
+      <strong>+ Enviar fotografias</strong>
+      <span>Arraste aqui ou clique</span>
     </label>
     <div class="opts">
       <label>Resolução
         <select id="dpi">
-          <option value="300">300 DPI · 591 × 591 px</option>
-          <option value="600" selected>600 DPI · 1181 × 1181 px</option>
-          <option value="1200">1200 DPI · 2362 × 2362 px</option>
+          <option value="300">300 DPI · 591 px</option>
+          <option value="600" selected>600 DPI · 1181 px</option>
+          <option value="1200">1200 DPI · 2362 px</option>
         </select>
       </label>
       <label>Tema padrão <select id="defTheme"></select></label>
       <label class="check"><input type="checkbox" id="defCutout" checked /> Recortar fundo da foto</label>
-      <label class="check"><input type="checkbox" id="defHat" checked /> Gorro de Papai Noel</label>
       <button id="btnAll" class="primary" disabled>Baixar todas (ZIP)</button>
-      <button id="btnA4" disabled>Folha A4 para impressão</button>
+      <button id="btnA4" disabled>Folha A4</button>
     </div>
     <p class="status" id="status">Carregando biblioteca de assets…</p>
   </section>
 
-  <section id="grid" class="grid"></section>
+  <section class="editor" id="editor" hidden>
+    <div class="stagewrap">
+      <button class="nav prev" id="prev" aria-label="Foto anterior">‹</button>
+      <div class="stage big"><canvas id="mainCanvas" width="900" height="900"></canvas><div class="busy" id="busy" hidden>Analisando foto…</div></div>
+      <button class="nav next" id="next" aria-label="Próxima foto">›</button>
+    </div>
+    <aside class="panel">
+      <p class="counter" id="counter"></p>
+      <h2 id="photoName"></h2>
+      <label class="field">Modelo de decoração <select id="tpl"></select></label>
+      <label class="field">Cor da bola <select id="theme"></select></label>
+      <label class="field">Zoom da foto <input type="range" id="zoom" min="0.6" max="2.2" step="0.01" value="1" /></label>
+      <label class="check"><input type="checkbox" id="cutout" /> Fundo de vidro (recorte da foto)</label>
+      <p class="hint">Arraste a foto para reposicionar · use a rolagem do mouse para zoom.</p>
+      <p class="facewarn" id="facewarn" hidden>Rosto não detectado: ajuste o enquadramento manualmente.</p>
+      <button id="recompose" class="wide">Nova composição</button>
+      <button id="dl" class="primary wide">Baixar PNG 5 × 5 cm</button>
+      <button id="del" class="ghost wide">Remover esta foto</button>
+    </aside>
+  </section>
+
+  <section class="strip" id="strip"></section>
   <p class="empty" id="empty">Envie uma ou mais fotos. Cada uma recebe uma composição natalina própria, seguindo o padrão visual da referência.</p>
 </main>
-
-<template id="cardTpl">
-  <article class="card">
-    <div class="stage"><canvas width="560" height="560"></canvas><div class="busy">Analisando foto…</div></div>
-    <div class="ctrl">
-      <div class="row">
-        <select class="tpl"></select>
-        <select class="theme"></select>
-      </div>
-      <div class="row">
-        <label>Zoom <input type="range" class="zoom" min="0.6" max="2.2" step="0.01" value="1" /></label>
-      </div>
-      <div class="row checks">
-        <label class="check"><input type="checkbox" class="cutout" /> Fundo de vidro</label>
-        <label class="check"><input type="checkbox" class="hat" /> Gorro</label>
-      </div>
-      <p class="hint">Arraste a foto para reposicionar.</p>
-      <div class="row">
-        <button class="recompose">Nova composição</button>
-        <button class="dl primary">Baixar PNG</button>
-        <button class="del ghost" title="Remover foto">Remover</button>
-      </div>
-      <p class="facewarn" hidden>Rosto não detectado: ajuste o enquadramento manualmente.</p>
-    </div>
-  </article>
-</template>
 
 <dialog id="libDialog">
   <form method="dialog" class="dlg-head"><h2>Biblioteca de assets</h2><button>Fechar</button></form>
