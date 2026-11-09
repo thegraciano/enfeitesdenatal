@@ -124,13 +124,13 @@ export function compose({ lib, seed, template, theme, face, usage, hat, textZone
       items.push(capItem);
       ringY = capItem.y - h * 0.25;
     }
-    const bow = pick('bow', rng.chance(0.7) ? [T.bow[0]] : T.bow);
+    const bow = pick('bow', rng.chance(0.7) ? [T.bow[0]] : T.bow, ['wm-red-satin-bow']); // sem laço de cauda torta
     if (bow) {
       const knot = KNOT[bow.id] ?? 0.42;
       let w = rng.range(0.5, 0.6);
       if (bow.aspect > 1.1) w = rng.range(0.34, 0.4); // laços com caudas longas
       const h = w * bow.aspect;
-      place(bow, { x: 0.5 + rng.range(-0.01, 0.01), y: ringY + (0.5 - knot) * h, w, rot: rng.range(-4, 4) * D2R, flip: rng.chance(0.5), layer: 'front', minW: 0.25 });
+      place(bow, { x: 0.5 + rng.range(-0.01, 0.01), y: ringY + (0.5 - knot) * h, w, rot: 0, flip: rng.chance(0.5), layer: 'front', minW: 0.25 });
     }
     return ringY;
   };
@@ -214,14 +214,10 @@ export function compose({ lib, seed, template, theme, face, usage, hat, textZone
       break;
     }
     case 'dourado': {
-      top();
-      // fita dourada acompanhando a borda inferior lateral (fora da área do texto)
-      const rt = side(152); const RP = rimPoint(rt, 1.0);
-      place(pick('ribbon', ['gold']), { x: RP[0], y: RP[1], w: rng.range(0.5, 0.56), rot: (rt - 90) * D2R, flip: mirror, minW: 0.3 });
-      const th = side(38); const P = rimPoint(th, 1.0);
-      place(pick('ball', ['gold']), { x: P[0], y: P[1], w: 0.15 });
-      place(pick('pinecone', ['gold']), { x: P[0] + (mirror ? 0.07 : -0.07), y: P[1] + 0.06, w: 0.11, rot: rng.range(0, 360) * D2R });
-      stars(3, [side(-150), side(-30), side(10)], [0.05, 0.08]);
+      // arranjo dourado: tons metálicos em todos os elementos
+      top(); cluster(side(42), 'balls'); accent(side(-140));
+      { const B = rimPoint(side(140), 1.02); place(pick('bell'), { x: B[0], y: B[1], w: 0.13, rot: rng.range(-10, 10) * D2R }); }
+      stars(2, [side(-40), side(170)], [0.05, 0.07]);
       break;
     }
     default: { // clássico
