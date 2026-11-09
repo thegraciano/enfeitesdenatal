@@ -1,9 +1,9 @@
-import { AssetLibrary, CATEGORIES } from './assets.js?v=20251110';
-import { compose, THEMES, TEMPLATES } from './composer.js?v=20251110';
-import { render, faceZones, textLayout } from './renderer.js?v=20251110';
-import { canvasToPngWithDpi, makeZip, download, a4Sheets, a4Pdf } from './export.js?v=20251110';
-import { loadVision, detectFace, cutoutPerson } from './vision.js?v=20251110';
-import { randomSeed, makeRng } from './rng.js?v=20251110';
+import { AssetLibrary, CATEGORIES } from './assets.js?v=20251113';
+import { compose, THEMES, TEMPLATES } from './composer.js?v=20251113';
+import { render, faceZones, textLayout } from './renderer.js?v=20251113';
+import { canvasToPngWithDpi, makeZip, download, a4Sheets, a4Pdf } from './export.js?v=20251113';
+import { loadVision, detectFace, cutoutPerson } from './vision.js?v=20251113';
+import { randomSeed, makeRng } from './rng.js?v=20251113';
 
 const $ = (s, r = document) => r.querySelector(s);
 const lib = new AssetLibrary();
@@ -180,9 +180,9 @@ async function renderAll(what) {
   return out;
 }
 
-async function renderExport(st) {
+async function renderExport(st, mirror = false) {
   const c = document.createElement('canvas'); c.width = c.height = sizePx();
-  render(c, st, st.comp, { shadows: true });
+  render(c, st, st.comp, { shadows: true, mirror });
   return c;
 }
 async function exportOne(st) {
@@ -210,9 +210,14 @@ $('#btnPdf').onclick = () => guarded('gerar o PDF', async () => {
   {
     const dpi = Math.min(600, Math.max(300, Number($('#dpi').value)));
     const canvases = await renderAll('Gerando PDF da folha A4');
-    const sheets = a4Sheets(canvases, dpi, $('#a4Pairs').checked);
+    let backs = null;
+    if ($('#a4Pairs').checked) { // verso: só os enfeites espelhados; foto e texto normais (a frente não é alterada)
+      backs = [];
+      for (const [i, st] of photos.entries()) { setStatus(`Gerando versos espelhados… ${i + 1}/${photos.length}`); await tick(); backs.push(await renderExport(st, true)); }
+    }
+    const sheets = a4Sheets(canvases, dpi, $('#a4Pairs').checked, backs);
     download(await a4Pdf(sheets), 'bolinhas-de-natal-A4.pdf');
-    setStatus(`PDF gerado: ${sheets.length} página(s) A4, ${canvases.length} bolinha(s) de 5 × 5 cm${$('#a4Pairs').checked ? ' (2 de cada, frente e verso)' : ''}. Imprima em "Tamanho real" (100%).`);
+    setStatus(`PDF gerado: ${sheets.length} página(s) A4, ${canvases.length} bolinha(s) de 5 × 5 cm${$('#a4Pairs').checked ? ' (original + verso com enfeites espelhados; foto e texto normais)' : ''}. Imprima em "Tamanho real" (100%).`);
   }
 });
 

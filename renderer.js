@@ -1,5 +1,5 @@
 // Renderização em canvas: fotografia + vidro da bola + assets posicionados.
-import { GEO, THEMES } from './composer.js?v=20251110';
+import { GEO, THEMES } from './composer.js?v=20251113';
 
 export function photoTransform(st) {
   const { w, h } = st; const { cx, cy, R } = GEO;
@@ -103,14 +103,18 @@ function drawShadowed(ctx, S, it) {
   ctx.restore();
 }
 
-export function render(canvas, st, comp, { shadows = true } = {}) {
+export function render(canvas, st, comp, { shadows = true, mirror = false } = {}) {
   const S = canvas.width; const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   ctx.clearRect(0, 0, S, S);
   const T = THEMES[comp.theme] || THEMES.vermelho;
   const cx = GEO.cx * S, cy = GEO.cy * S, R = GEO.R * S;
 
+  // verso (mirror): espelha só os elementos decorativos; foto e texto ficam como na frente
+  const flip = (c) => { if (mirror) c.setTransform(-1, 0, 0, 1, S, 0); };
+  ctx.save(); flip(ctx);
   for (const it of comp.items) if (it.layer === 'back') shadows ? drawShadowed(ctx, S, it) : drawItem(ctx, S, it);
+  ctx.restore();
 
   // ---- interior da bola ----
   const L = document.createElement('canvas'); L.width = L.height = S;
@@ -120,8 +124,10 @@ export function render(canvas, st, comp, { shadows = true } = {}) {
   if (st.useCutout && st.cutout) {
     const g = lc.createRadialGradient(cx - R * 0.15, cy - R * 0.1, R * 0.05, cx, cy, R);
     g.addColorStop(0, T.glass[0]); g.addColorStop(0.55, T.glass[1]); g.addColorStop(1, T.glass[2]);
+    lc.save(); flip(lc);
     lc.fillStyle = g; lc.fillRect(0, 0, S, S);
     for (const it of comp.inner) drawItem(lc, S, it);
+    lc.restore();
     // pessoa recortada, com dissolução suave na parte inferior (como no exemplo)
     const P = document.createElement('canvas'); P.width = P.height = S; const pc = P.getContext('2d'); pc.imageSmoothingQuality = 'high';
     pc.drawImage(st.cutout, ox * S, oy * S, st.w * k * S, st.h * k * S);
@@ -136,11 +142,14 @@ export function render(canvas, st, comp, { shadows = true } = {}) {
     lc.drawImage(P, 0, 0);
   } else {
     lc.drawImage(st.bitmap, ox * S, oy * S, st.w * k * S, st.h * k * S);
+    lc.save(); flip(lc);
     for (const it of comp.inner) drawItem(lc, S, it);
+    lc.restore();
   }
   if (comp.hat) { lc.save(); lc.shadowColor = 'rgba(0,0,0,0.3)'; lc.shadowBlur = S * 0.01; drawItem(lc, S, comp.hat); lc.restore(); }
 
   // ---- efeito de vidro ----
+  flip(lc); // (a bola é simétrica: o recorte circular não muda)
   let g = lc.createRadialGradient(cx, cy, R * 0.62, cx, cy, R);
   g.addColorStop(0, hexA(T.glass[1], 0)); g.addColorStop(0.7, hexA(T.glass[1], 0.28)); g.addColorStop(1, hexA(T.glass[2], 0.78));
   lc.fillStyle = g; lc.fillRect(0, 0, S, S);
@@ -155,13 +164,17 @@ export function render(canvas, st, comp, { shadows = true } = {}) {
   lc.beginPath(); lc.arc(cx, cy, R * 0.92, Math.PI * 0.12, Math.PI * 0.36); lc.stroke();
   lc.restore();
   // aro do vidro
+  flip(lc);
   g = lc.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
   g.addColorStop(0, 'rgba(255,255,255,0.85)'); g.addColorStop(0.5, hexA(T.glass[0], 0.6)); g.addColorStop(1, hexA(T.glass[2], 0.9));
   lc.strokeStyle = g; lc.lineWidth = Math.max(1.5, S * 0.007);
   lc.beginPath(); lc.arc(cx, cy, R - lc.lineWidth / 2, 0, Math.PI * 2); lc.stroke();
+  lc.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(L, 0, 0);
 
+  ctx.save(); flip(ctx);
   for (const it of comp.items) if (it.layer === 'front') shadows ? drawShadowed(ctx, S, it) : drawItem(ctx, S, it);
+  ctx.restore();
   drawCaption(ctx, S, st, comp.captionFit || 0.86); // sempre presente, por cima de tudo
 }
 

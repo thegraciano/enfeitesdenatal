@@ -48,7 +48,8 @@ export function download(blob, name) {
 
 // Folha A4 (21 × 29,7 cm) com bolinhas de 5 × 5 cm, fundo transparente.
 // pairs = true → cada bolinha sai 2× (uma em cima da outra) para colar frente e verso.
-export function a4Sheets(canvases, dpi, pairs = false) {
+// backs (opcional) → verso de cada par (arte espelhada com texto legível), mesmo tamanho e mesmo X da frente.
+export function a4Sheets(canvases, dpi, pairs = false, backs = null) {
   const px = (cm) => Math.round((cm / 2.54) * dpi);
   const W = px(21), H = px(29.7), cell = px(5), cols = 3;
   const sheets = [];
@@ -62,7 +63,7 @@ export function a4Sheets(canvases, dpi, pairs = false) {
         const col = j % cols, blk = Math.floor(j / cols);
         const X = Math.round(gx + col * (cell + gx)), Y = Math.round(gy + blk * (2 * cell + inner + gy));
         x.drawImage(cv, X, Y, cell, cell);
-        x.drawImage(cv, X, Y + cell + inner, cell, cell);
+        x.drawImage(backs ? backs[i + j] : cv, X, Y + cell + inner, cell, cell);
       });
     }
     return sheets;
@@ -87,8 +88,16 @@ export async function a4Pdf(sheets) {
   for (const s of sheets) {
     const c = document.createElement('canvas'); c.width = s.width; c.height = s.height; const x = c.getContext('2d');
     x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(s, 0, 0);
-    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.95));
-    imgs.push({ w: c.width, h: c.height, data: new Uint8Array(await blob.arrayBuffer()) });
+    if (typeof CompressionStream === 'function') {
+      const px = x.getImageData(0, 0, c.width, c.height).data; const rgb = new Uint8Array(c.width * c.height * 3);
+      for (let i = 0, j = 0; i < px.length; i += 4, j += 3) { rgb[j] = px[i]; rgb[j + 1] = px[i + 1]; rgb[j + 2] = px[i + 2]; }
+      const z = await new Response(new Blob([rgb]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer();
+      imgs.push({ w: c.width, h: c.height, data: new Uint8Array(z), filter: 'FlateDecode' }); // sem perda de qualidade
+    } else {
+      const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.97));
+      imgs.push({ w: c.width, h: c.height, data: new Uint8Array(await blob.arrayBuffer()), filter: 'DCTDecode' });
+    }
+    c.width = c.height = 0;
   }
   const W = 595.28, H = 841.89, n = imgs.length; // pontos (A4)
   push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
@@ -100,7 +109,7 @@ export async function a4Pdf(sheets) {
     obj(p, () => push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 ${io} 0 R >> >> /Contents ${ct} 0 R >>`));
     const cs = `q ${W} 0 0 ${H} 0 0 cm /Im0 Do Q`;
     obj(ct, () => push(`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`));
-    obj(io, () => { push(`<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.data.length} >>\nstream\n`); push(im.data); push('\nendstream'); });
+    obj(io, () => { push(`<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /${im.filter} /Length ${im.data.length} >>\nstream\n`); push(im.data); push('\nendstream'); });
   });
   const total = 3 + n * 3; const xref = len;
   let t = `xref\n0 ${total}\n0000000000 65535 f \n`;
