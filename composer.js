@@ -215,9 +215,14 @@ export function compose({ lib, seed, template, theme, face, usage, hat, textZone
     }
     case 'dourado': {
       // arranjo dourado: tons metálicos em todos os elementos
-      top(); cluster(side(42), 'balls'); accent(side(-140));
-      { const B = rimPoint(side(140), 1.02); place(pick('bell'), { x: B[0], y: B[1], w: 0.13, rot: rng.range(-10, 10) * D2R }); }
-      stars(2, [side(-40), side(170)], [0.05, 0.07]);
+      top();
+      // fita dourada na horizontal, centralizada logo abaixo da bolinha
+      { const rb = pick('ribbon', ['gold']);
+        if (rb) { const w = rng.range(0.47, 0.5), h = w * rb.aspect;
+          items.push({ asset: rb, x: 0.5, y: Math.min(1 - h / 2 - 0.004, GEO.cy + GEO.R - 0.01), w, flip: rng.chance(0.5), layer: 'front', protect: false }); } }
+      cluster(side(12), 'balls'); accent(side(-140));
+      { const B = rimPoint(side(168), 1.02); place(pick('bell'), { x: B[0], y: B[1], w: 0.12, rot: rng.range(-10, 10) * D2R }); }
+      stars(2, [side(-40), side(-150)], [0.05, 0.07]);
       break;
     }
     default: { // clássico
