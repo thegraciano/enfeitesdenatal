@@ -1,5 +1,5 @@
 // Renderização em canvas: fotografia + vidro da bola + assets posicionados.
-import { GEO, THEMES } from './composer.js?v=20251113';
+import { GEO, THEMES } from './composer.js?v=20251114';
 
 export function photoTransform(st) {
   const { w, h } = st; const { cx, cy, R } = GEO;

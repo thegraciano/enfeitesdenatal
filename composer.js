@@ -1,6 +1,6 @@
 // Motor de composição: decide QUAIS assets usar e ONDE colocá-los.
 // Todas as coordenadas são normalizadas (0..1) em relação ao lado do quadrado 5 × 5 cm.
-import { makeRng } from './rng.js?v=20251113';
+import { makeRng } from './rng.js?v=20251114';
 
 export const GEO = { cx: 0.5, cy: 0.585, R: 0.38 };
 const D2R = Math.PI / 180;
@@ -22,6 +22,28 @@ export const TEMPLATES = {
   dourado: 'Fita dourada',
   presentes: 'Presentes',
 };
+
+// ---------- designs: todas as combinações visíveis (modelo + laço/guirlanda) ----------
+// Cada design fixa o elemento principal; a semente só varia detalhes (flocos, estrelas, lado do arranjo).
+const TPL_KIDS = { classico: 'Neve', canto: 'Cantinho de bolinhas', base: 'Pinheirinho', presentes: 'Presentes', dourado: 'Fita dourada', guirlanda: 'Guirlanda' };
+const BOW_NAMES = { 'oc-174861': 'laço vermelho', 'oc-172639': 'laço dourado', 'oc-237995': 'laço dourado brilhante' };
+const WREATH_NAMES = { 'oc-311476': 'de azevinho', 'oc-354001': 'com laço vermelho' };
+export function buildDesigns(lib) {
+  const bows = lib.byCat('bow').filter((b) => b.id !== 'wm-red-satin-bow');
+  const bowName = (b, i) => BOW_NAMES[b.id] || `laço ${i + 1}`;
+  const out = [];
+  for (const t of ['classico', 'canto', 'base', 'presentes', 'dourado']) {
+    if (!bows.length) out.push({ key: t, template: t, name: TPL_KIDS[t] });
+    bows.forEach((b, i) => out.push({ key: `${t}:${b.id}`, template: t, bow: b.id, name: `${TPL_KIDS[t]} · ${bowName(b, i)}` }));
+  }
+  lib.byCat('wreath').forEach((w, wi) => {
+    const wn = `Guirlanda ${WREATH_NAMES[w.id] || wi + 1}`;
+    if (w.hasBow || !bows.length) out.push({ key: `guirlanda:${w.id}`, template: 'guirlanda', wreath: w.id, name: wn });
+    else bows.forEach((b, i) => out.push({ key: `guirlanda:${w.id}:${b.id}`, template: 'guirlanda', wreath: w.id, bow: b.id, name: `${wn} · ${bowName(b, i)}` }));
+  });
+  if (!out.some((d) => d.template === 'guirlanda')) out.push({ key: 'guirlanda', template: 'guirlanda', name: TPL_KIDS.guirlanda });
+  return out;
+}
 
 // Ponto de pega do laço (fração da altura onde está o nó)
 const KNOT = { 'wm-red-satin-bow': 0.2, 'oc-237995': 0.42, 'oc-236680': 0.45, 'oc-174861': 0.35, 'oc-310694': 0.42, 'oc-172639': 0.4 };
@@ -73,7 +95,8 @@ function resolve(it, zones) {
 }
 
 // ---------- composição ----------
-export function compose({ lib, seed, template, theme, face, usage, hat, textZone }) {
+export function compose({ lib, seed, template, theme, face, usage, hat, textZone, design }) {
+  const forced = (id) => { const a = id && lib.get(id); return a && a.img && !a.broken ? a : null; };
   const zones = [face, textZone].filter(Boolean);
   const rng = makeRng(seed);
   const T = THEMES[theme] || THEMES.vermelho;
@@ -124,7 +147,8 @@ export function compose({ lib, seed, template, theme, face, usage, hat, textZone
       items.push(capItem);
       ringY = capItem.y - h * 0.25;
     }
-    const bow = pick('bow', rng.chance(0.7) ? [T.bow[0]] : T.bow, ['wm-red-satin-bow']); // sem laço de cauda torta
+    const autoBow = pick('bow', rng.chance(0.7) ? [T.bow[0]] : T.bow, ['wm-red-satin-bow']); // sem laço de cauda torta
+    const bow = forced(design?.bow) || autoBow;
     if (bow) {
       const knot = KNOT[bow.id] ?? 0.42;
       let w = rng.range(0.5, 0.6);
@@ -199,7 +223,7 @@ export function compose({ lib, seed, template, theme, face, usage, hat, textZone
       break;
     }
     case 'guirlanda': {
-      const wr = pick('wreath');
+      const wr = forced(design?.wreath) || pick('wreath');
       if (wr && wr.hasBow) {
         const [rx, ry, rr] = wr.ring; const w = (GEO.R * 1.04) / rr; const h = w * wr.aspect;
         items.push({ asset: wr, x: GEO.cx + (0.5 - rx) * w, y: GEO.cy + (0.5 - ry) * h, w, layer: 'front', protect: false });

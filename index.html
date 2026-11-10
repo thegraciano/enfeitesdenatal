@@ -3,86 +3,113 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Bolinhas de Natal com Foto · 5 × 5 cm</title>
+<title>Bolinhas de Natal com Foto 🎄</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&family=Great+Vibes&family=Montserrat:wght@700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&family=Great+Vibes&family=Montserrat:wght@700&display=swap" rel="stylesheet" />
 <link rel="icon" href="oc-226862.png" />
-<link rel="stylesheet" href="styles.css?v=20251113" />
+<link rel="stylesheet" href="styles.css?v=20251114" />
 </head>
 <body>
+<div class="snow" aria-hidden="true"></div>
 <header class="top">
   <div class="brand">
     <img src="oc-226862.png" alt="" class="logo" />
     <div>
-      <h1>Bolinhas de Natal com Foto</h1>
-      <p>PNG transparente · 5 × 5 cm · assets de bibliotecas profissionais</p>
+      <h1>Bolinhas de Natal</h1>
+      <p>Coloque sua foto numa bolinha de Natal! 🎄</p>
     </div>
   </div>
   <div class="actions">
-    <button id="btnLibrary" class="ghost">Biblioteca de assets</button>
-    <button id="btnCredits" class="ghost">Créditos e licenças</button>
+    <button id="btnLibrary" class="pill">Enfeites</button>
+    <button id="btnCredits" class="pill">Créditos</button>
   </div>
 </header>
 
 <main>
-  <section class="toolbar">
-    <label class="drop small" id="drop">
+  <section class="hero">
+    <label class="drop" id="drop">
       <input type="file" id="fileInput" accept="image/*" multiple hidden />
-      <strong>+ Enviar fotografias</strong>
-      <span>Arraste aqui ou clique</span>
+      <span class="drop-ico">📸</span>
+      <strong>Escolher fotos</strong>
+      <span>ou arraste as fotos aqui</span>
     </label>
-    <div class="opts">
-      <label>Resolução
-        <select id="dpi">
-          <option value="300">300 DPI · 591 px</option>
-          <option value="600" selected>600 DPI · 1181 px</option>
-          <option value="1200">1200 DPI · 2362 px</option>
-        </select>
-      </label>
-      <label>Tema padrão <select id="defTheme"></select></label>
-      <label class="check"><input type="checkbox" id="defCutout" checked /> Recortar fundo da foto</label>
-      <button id="btnAll" class="primary" disabled>Baixar todas (ZIP)</button>
-      <label class="check"><input type="checkbox" id="a4Pairs" checked /> Folha A4: 2 de cada (no PDF, a 2ª tem só os enfeites espelhados)</label>
-      <button id="btnA4" disabled>Folha A4 (PNG)</button>
-      <button id="btnPdf" disabled>Folha A4 (PDF)</button>
-    </div>
-    <p class="tip">Para imprimir no tamanho certo, escolha <b>“Tamanho real” / 100%</b> na impressora (não use “Ajustar à página”).</p>
-    <p class="status" id="status">Carregando biblioteca de assets…</p>
+    <p class="status" id="status">Carregando os enfeites…</p>
   </section>
+
+  <p class="empty" id="empty">Envie uma ou mais fotos e cada uma vira uma bolinha de Natal diferente. ✨</p>
 
   <section class="editor" id="editor" hidden>
     <div class="stagewrap">
       <button class="nav prev" id="prev" aria-label="Foto anterior">‹</button>
-      <div class="stage big"><canvas id="mainCanvas" width="900" height="900"></canvas><div class="busy" id="busy" hidden>Analisando foto…</div></div>
+      <div class="stage big"><canvas id="mainCanvas" width="900" height="900"></canvas><div class="busy" id="busy" hidden>Preparando a foto… ⏳</div></div>
       <button class="nav next" id="next" aria-label="Próxima foto">›</button>
     </div>
     <aside class="panel">
       <p class="counter" id="counter"></p>
       <h2 id="photoName"></h2>
-      <label class="field">Modelo de decoração <select id="tpl"></select></label>
-      <label class="field">Cor da bola <select id="theme"></select></label>
-      <label class="field">Zoom da foto <input type="range" id="zoom" min="0.6" max="2.2" step="0.01" value="1" /></label>
-      <label class="check"><input type="checkbox" id="cutout" /> Fundo de vidro (recorte da foto)</label>
-      <div class="textbox">
-        <p class="tb-title">Texto da bolinha <span>obrigatório</span></p>
-        <p class="tb-preview">“Feliz Natal” · “SCFV Espaço Amigo”</p>
-        <div class="field">Cor da fonte
-          <div class="colors"><div class="swatches" id="swatches"></div><input type="color" id="txtColor" value="#ffffff" title="Outra cor" /></div>
+
+      <div class="picker">
+        <span class="picker-label">🎀 Enfeite</span>
+        <div class="picker-row">
+          <button class="arrow" id="designPrev" type="button" aria-label="Enfeite anterior">‹</button>
+          <div class="picker-val"><b id="designName"></b><small id="designCount"></small></div>
+          <button class="arrow" id="designNext" type="button" aria-label="Próximo enfeite">›</button>
         </div>
-        <label class="field"><span class="op">Opacidade <b id="opVal">100%</b></span><input type="range" id="txtOp" min="30" max="100" step="1" value="100" /></label>
-        <button id="txtAll" type="button" class="ghost wide">Aplicar a todas as fotos</button>
       </div>
-      <p class="hint">Arraste a foto para reposicionar · rolagem do mouse = zoom · setas ← → trocam de foto · Ctrl+V cola uma imagem.</p>
-      <p class="facewarn" id="facewarn" hidden>Rosto não detectado: ajuste o enquadramento manualmente.</p>
-      <p class="facewarn" id="cutwarn" hidden>Nenhuma pessoa encontrada: a foto foi mantida inteira, sem recorte de fundo.</p>
-      <button id="recompose" class="wide">Nova composição</button>
-      <button id="dl" class="primary wide">Baixar PNG 5 × 5 cm</button>
-      <button id="del" class="ghost wide">Remover esta foto</button>
+
+      <div class="picker">
+        <span class="picker-label">🎨 Cor da bolinha</span>
+        <div class="picker-row">
+          <button class="arrow" id="themePrev" type="button" aria-label="Cor anterior">‹</button>
+          <div class="picker-val"><b><i class="dot" id="themeDot"></i><span id="themeName"></span></b><small id="themeCount"></small></div>
+          <button class="arrow" id="themeNext" type="button" aria-label="Próxima cor">›</button>
+        </div>
+      </div>
+
+      <label class="field">🔍 Tamanho da foto <input type="range" id="zoom" min="0.6" max="2.2" step="0.01" value="1" /></label>
+
+      <div class="field">✏️ Cor das letras
+        <div class="colors"><div class="swatches" id="swatches"></div><input type="color" id="txtColor" value="#ffffff" title="Outra cor" /></div>
+        <button id="txtAll" type="button" class="link">Usar esta cor em todas</button>
+      </div>
+
+      <label class="check"><input type="checkbox" id="cutout" /> Fundo de vidro (tira o fundo da foto)</label>
+      <p class="hint">Arraste a foto para mexer · rodinha do mouse aumenta ou diminui.</p>
+      <p class="facewarn" id="facewarn" hidden>Não achamos o rosto: arraste a foto para arrumar.</p>
+      <p class="facewarn" id="cutwarn" hidden>Não achamos uma pessoa: a foto ficou inteira, sem tirar o fundo.</p>
+
+      <button id="recompose" class="btn-soft wide">🎲 Misturar enfeites</button>
+      <button id="dl" class="btn-red wide">⬇️ Baixar esta bolinha</button>
+      <button id="del" class="link danger">Remover esta foto</button>
     </aside>
   </section>
 
   <section class="strip" id="strip"></section>
-  <p class="empty" id="empty">Envie uma ou mais fotos. Cada uma recebe uma composição natalina própria, seguindo o padrão visual da referência.</p>
+
+  <section class="print card">
+    <h3>🖨️ Imprimir</h3>
+    <div class="print-row">
+      <button id="btnPdf" class="btn-green big" disabled>📄 Folha A4 em PDF</button>
+      <button id="btnA4" class="btn-soft" disabled>🖼️ Folha A4 em imagem</button>
+      <button id="btnAll" class="btn-soft" disabled>📦 Todas as bolinhas (ZIP)</button>
+    </div>
+    <label class="check"><input type="checkbox" id="a4Pairs" checked /> 2 de cada na folha (frente e verso para colar)</label>
+    <p class="tip">Na impressora, escolha <b>“Tamanho real” / 100%</b> para a bolinha sair com 5 × 5 cm.</p>
+    <details class="more">
+      <summary>⚙️ Mais opções</summary>
+      <div class="opts">
+        <label>Qualidade
+          <select id="dpi">
+            <option value="300">Boa (300 DPI)</option>
+            <option value="600" selected>Ótima (600 DPI)</option>
+            <option value="1200">Máxima (1200 DPI)</option>
+          </select>
+        </label>
+        <label>Cor inicial das fotos novas <select id="defTheme"></select></label>
+        <label class="check"><input type="checkbox" id="defCutout" checked /> Tirar o fundo das fotos novas</label>
+      </div>
+    </details>
+  </section>
 </main>
 
 <dialog id="libDialog">
@@ -105,6 +132,6 @@
   <div id="credList"></div>
 </dialog>
 
-<script type="module" src="app.js?v=20251113"></script>
+<script type="module" src="app.js?v=20251114"></script>
 </body>
 </html>

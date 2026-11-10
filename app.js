@@ -1,15 +1,28 @@
-import { AssetLibrary, CATEGORIES } from './assets.js?v=20251113';
-import { compose, THEMES, TEMPLATES } from './composer.js?v=20251113';
-import { render, faceZones, textLayout } from './renderer.js?v=20251113';
-import { canvasToPngWithDpi, makeZip, download, a4Sheets, a4Pdf } from './export.js?v=20251113';
-import { loadVision, detectFace, cutoutPerson } from './vision.js?v=20251113';
-import { randomSeed, makeRng } from './rng.js?v=20251113';
+import { AssetLibrary, CATEGORIES } from './assets.js?v=20251114';
+import { compose, THEMES, TEMPLATES, buildDesigns } from './composer.js?v=20251114';
+import { render, faceZones, textLayout } from './renderer.js?v=20251114';
+import { canvasToPngWithDpi, makeZip, download, a4Sheets, a4Pdf } from './export.js?v=20251114';
+import { loadVision, detectFace, cutoutPerson } from './vision.js?v=20251114';
+import { randomSeed, makeRng } from './rng.js?v=20251114';
 
 const $ = (s, r = document) => r.querySelector(s);
 const lib = new AssetLibrary();
 const photos = [];
 const MAX_SIDE = 2400;
-const tplOrder = makeRng(randomSeed()).shuffle(Object.keys(TEMPLATES));
+let designs = [];       // todos os designs (modelo + laço/guirlanda), sem depender de "Nova composição"
+let designOrder = [];   // ordem de distribuição para fotos novas (alterna modelos)
+const orderRng = makeRng(randomSeed());
+function rebuildDesigns() {
+  designs = buildDesigns(lib);
+  const groups = {};
+  for (const d of designs) (groups[d.template] ||= []).push(d);
+  const lists = orderRng.shuffle(Object.keys(groups)).map((k) => orderRng.shuffle([...groups[k]]));
+  designOrder = [];
+  for (let i = 0; lists.some((l) => i < l.length); i++) for (const l of lists) if (l[i]) designOrder.push(l[i].key);
+  for (const p of photos) if (!designs.some((d) => d.key === p.design)) setDesign(p, designOrder[0]);
+}
+const designOf = (st) => designs.find((d) => d.key === st.design) || designs[0];
+function setDesign(st, key) { st.design = key; st.template = (designs.find((d) => d.key === key) || designs[0])?.template || 'classico'; }
 let visionState = 'idle';
 
 const fillSelect = (sel, obj, val) => { sel.innerHTML = Object.entries(obj).map(([k, v]) => `<option value="${k}">${typeof v === 'string' ? v : v.name}</option>`).join(''); if (val) sel.value = val; };
@@ -21,7 +34,8 @@ async function init() {
   fillSelect($('#impCat'), CATEGORIES);
   try { await Promise.all([document.fonts.load('80px "Great Vibes"'), document.fonts.load('700 40px Montserrat')]); } catch (e) { console.warn('fontes', e); }
   try { await lib.init(); } catch (e) { setStatus('Não foi possível carregar assets/manifest.json. Abra o app por um servidor (GitHub Pages ou "npx serve").'); return; }
-  setStatus(`${lib.assets.filter((a) => a.img).length} assets profissionais carregados.`);
+  setStatus(`Tudo pronto! ${lib.assets.filter((a) => a.img).length} enfeites carregados. 🎅`);
+  rebuildDesigns();
   setupEditor();
   warmVision();
 }
@@ -54,7 +68,7 @@ const SWATCHES = { Branco: '#ffffff', Dourado: '#f2c96b', Creme: '#fff1d0', Verm
 
 function recompute(st) {
   const z = faceZones(st);
-  st.comp = compose({ lib, seed: st.seed, template: st.template, theme: st.theme, face: z.ellipse, usage: usageExcept(st), hat: null, textZone: textLayout(st).zone });
+  st.comp = compose({ lib, seed: st.seed, template: st.template, design: designOf(st), theme: st.theme, face: z.ellipse, usage: usageExcept(st), hat: null, textZone: textLayout(st).zone });
   render(st.thumb, st, st.comp, { shadows: true });
   if (st === current) render($('#mainCanvas'), st, st.comp, { shadows: true });
 }
@@ -68,8 +82,9 @@ async function addFiles(files) {
     const st = {
       name: f.name.replace(/\.[^.]+$/, ''), bitmap, w: bitmap.width, h: bitmap.height, face: null, cutout: null,
       useCutout: false, hat: false, busy: true, view: { zoom: 1, dx: 0, dy: 0 }, seed: randomSeed(), text: { ...textDefault },
-      template: tplOrder[photos.length % tplOrder.length], theme: $('#defTheme').value,
+      theme: $('#defTheme').value,
     };
+    setDesign(st, designOrder[photos.length % designOrder.length]);
     photos.push(st); buildThumb(st);
     if (!current) select(st);
     analyze(st);
@@ -113,11 +128,17 @@ function select(st) {
 
 function syncPanel() {
   const st = current; if (!st) return;
-  $('#photoName').textContent = st.name;
+  const nice = st.name && st.name.length <= 22 && !/[0-9a-f]{8}-[0-9a-f]{4}/i.test(st.name);
+  $('#photoName').textContent = nice ? st.name : `Bolinha ${photos.indexOf(st) + 1}`;
   $('#counter').textContent = `Foto ${photos.indexOf(st) + 1} de ${photos.length}`;
-  $('#tpl').value = st.template; $('#theme').value = st.theme; $('#zoom').value = st.view.zoom;
+  const di = Math.max(0, designs.findIndex((d) => d.key === st.design));
+  $('#designName').textContent = designs[di]?.name || ''; $('#designCount').textContent = `${di + 1} de ${designs.length}`;
+  const tk = Object.keys(THEMES), ti = Math.max(0, tk.indexOf(st.theme));
+  $('#themeName').textContent = THEMES[tk[ti]].name; $('#themeCount').textContent = `${ti + 1} de ${tk.length}`;
+  $('#themeDot').style.background = `radial-gradient(circle at 35% 30%, ${THEMES[tk[ti]].glass[0]}, ${THEMES[tk[ti]].glass[1]} 55%, ${THEMES[tk[ti]].glass[2]})`;
+  $('#zoom').value = st.view.zoom;
   $('#cutout').checked = st.useCutout; $('#cutout').disabled = !st.cutout;
-  $('#txtColor').value = st.text.color; $('#txtOp').value = Math.round(st.text.opacity * 100); $('#opVal').textContent = `${Math.round(st.text.opacity * 100)}%`;
+  $('#txtColor').value = st.text.color;
   document.querySelectorAll('#swatches button').forEach((b) => b.classList.toggle('on', b.dataset.c.toLowerCase() === st.text.color.toLowerCase()));
   $('#facewarn').hidden = st.busy || !!st.face;
   $('#cutwarn').hidden = st.busy || !st.noPerson;
@@ -133,17 +154,17 @@ function refreshUi() {
 }
 
 function setupEditor() {
-  fillSelect($('#tpl'), TEMPLATES); fillSelect($('#theme'), THEMES);
-  $('#tpl').onchange = (e) => { current.template = e.target.value; recompute(current); };
-  $('#theme').onchange = (e) => { current.theme = e.target.value; recompute(current); };
+  const cycle = (d) => { if (!current || !designs.length) return; const i = designs.findIndex((x) => x.key === current.design); setDesign(current, designs[(i + d + designs.length) % designs.length].key); recompute(current); syncPanel(); };
+  $('#designPrev').onclick = () => cycle(-1); $('#designNext').onclick = () => cycle(1);
+  const tcycle = (d) => { if (!current) return; const tk = Object.keys(THEMES); const i = tk.indexOf(current.theme); current.theme = tk[(i + d + tk.length) % tk.length]; recompute(current); syncPanel(); };
+  $('#themePrev').onclick = () => tcycle(-1); $('#themeNext').onclick = () => tcycle(1);
   $('#zoom').oninput = (e) => { current.view.zoom = Number(e.target.value); recompute(current); };
   $('#cutout').onchange = (e) => { current.useCutout = e.target.checked && !!current.cutout; recompute(current); };
   $('#swatches').innerHTML = Object.entries(SWATCHES).map(([n, c]) => `<button type="button" title="${n}" data-c="${c}" style="background:${c}"></button>`).join('');
   const setColor = (c) => { current.text.color = c; textDefault.color = c; recompute(current); syncPanel(); };
   $('#swatches').onclick = (e) => { const b = e.target.closest('button'); if (b && current) setColor(b.dataset.c); };
   $('#txtColor').oninput = (e) => current && setColor(e.target.value);
-  $('#txtOp').oninput = (e) => { if (!current) return; const o = Number(e.target.value) / 100; current.text.opacity = o; textDefault.opacity = o; $('#opVal').textContent = `${e.target.value}%`; recompute(current); };
-  $('#txtAll').onclick = () => { if (!current) return; for (const p of photos) { p.text = { ...current.text }; recompute(p); } setStatus('Cor e opacidade do texto aplicadas a todas as fotos.'); };
+  $('#txtAll').onclick = () => { if (!current) return; for (const p of photos) { p.text = { ...current.text }; recompute(p); } setStatus('Cor das letras aplicada a todas as bolinhas.'); };
   $('#recompose').onclick = () => { current.seed = randomSeed(); recompute(current); };
   $('#dl').onclick = () => guarded('baixar o PNG', async () => { const { blob, name } = await exportOne(current); download(blob, name); });
   $('#del').onclick = () => {
@@ -243,15 +264,15 @@ function renderLibrary() {
       </figure>`).join('')}</div>`).join('');
   $('#libList').querySelectorAll('figure').forEach((f) => {
     const id = f.dataset.id;
-    $('input', f).onchange = (e) => { lib.setEnabled(id, e.target.checked); f.classList.toggle('off', !e.target.checked); photos.forEach(recompute); };
-    const rm = $('.rm', f); if (rm) rm.onclick = async () => { await lib.remove(id); renderLibrary(); photos.forEach(recompute); };
+    $('input', f).onchange = (e) => { lib.setEnabled(id, e.target.checked); f.classList.toggle('off', !e.target.checked); rebuildDesigns(); photos.forEach(recompute); syncPanel(); };
+    const rm = $('.rm', f); if (rm) rm.onclick = async () => { await lib.remove(id); renderLibrary(); rebuildDesigns(); photos.forEach(recompute); syncPanel(); };
   });
 }
 const esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 $('#btnLibrary').onclick = () => { renderLibrary(); $('#libDialog').showModal(); };
 $('#impFiles').onchange = async (e) => {
   const added = await lib.importFiles(e.target.files, { category: $('#impCat').value, source: $('#impSrc').value, license: $('#impLic').value || 'Conforme a licença do site de origem', tone: $('#impTone').value });
-  e.target.value = ''; renderLibrary(); photos.forEach(recompute);
+  e.target.value = ''; renderLibrary(); rebuildDesigns(); photos.forEach(recompute); syncPanel();
   setStatus(`${added.length} asset(s) importado(s).`);
 };
 $('#btnCredits').onclick = () => {
